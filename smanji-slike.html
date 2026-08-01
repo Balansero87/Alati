@@ -52,6 +52,32 @@
 
   .hidden { display: none !important; }
 
+  .bar .lbl { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .bar .sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 2px; }
+  .sidebar .bar .fld { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  select, input[type=number] {
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 7px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  input[type=number] { width: 66px; }
+  input[type=range] { accent-color: var(--accent); width: 108px; vertical-align: middle; }
+  input[type=color] {
+    width: 30px; height: 26px; padding: 0;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); cursor: pointer;
+  }
+  .mode { min-width: 62px; }
+  .mode.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .chk input { accent-color: var(--accent); }
+
   .bar {
     display: flex;
     flex-wrap: wrap;
@@ -181,7 +207,39 @@
     <p class="sub">Sve ostaje na tvom uređaju. Bez uploada, bez naloga, bez ograničenja.</p>
   </header>
 
-  <div class="bar" id="traka"></div>
+  <div class="bar" id="traka">
+    <div class="fld">
+      <span class="lbl">Dimenzije</span>
+      <input type="number" id="w" placeholder="W" min="1">
+      <span class="lbl">×</span>
+      <input type="number" id="h" placeholder="H" min="1">
+      <select id="jedinica">
+        <option value="percent">percent</option>
+        <option value="pixels">pixels</option>
+        <option value="cm">centimeters</option>
+        <option value="inch">inches</option>
+      </select>
+    </div>
+    <div class="fld hidden" id="dpiFld">
+      <span class="lbl">DPI</span><input type="number" id="dpi" min="1">
+    </div>
+    <span class="sep"></span>
+    <div class="fld">
+      <span class="lbl">Režim</span>
+      <button class="mode" data-rezim="stretch">Stretch</button>
+      <button class="mode" data-rezim="crop">Crop</button>
+      <button class="mode" data-rezim="fit">Fit</button>
+    </div>
+    <span class="sep"></span>
+    <div class="fld">
+      <span class="lbl">Pozadina</span>
+      <input type="color" id="boja">
+      <label class="chk" id="provFld"><input type="checkbox" id="providno"> providno</label>
+    </div>
+    <div class="fld">
+      <label class="chk"><input type="checkbox" id="neUvecavaj"> ne uvećavaj</label>
+    </div>
+  </div>
   <div class="drop" id="drop">Prevuci slike ovde ili <b>izaberi fajlove</b> &nbsp;·&nbsp; JPG, PNG, WEBP, GIF</div>
   <input type="file" id="fajlovi" multiple accept="image/*" hidden>
   <div class="prog hidden" id="prog"><i></i></div>
@@ -198,6 +256,14 @@
   'use strict';
 
   // ---- podaci ----
+
+  var DEFAULTS = {
+    jedinica: 'pixels', w: 1600, h: '', dpi: 96,
+    rezim: 'fit', format: 'webp', quality: 82,
+    boja: '#ffffff', providno: false, neUvecavaj: true
+  };
+  var state = {};
+  for (var kljuc in DEFAULTS) state[kljuc] = DEFAULTS[kljuc];
 
   // ---- čiste funkcije ----
 
@@ -284,6 +350,36 @@
     }
   }
 
+  // Iscrtaj sliku na canvas tačnih dimenzija w×h prema režimu.
+  // p = {rezim, boja, providno, alfaMoguca}
+  function nacrtaj(src, w, h, p) {
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var x = c.getContext('2d');
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = 'high';
+
+    // pozadina se crta uvek osim kad korisnik traži providnost i format je ume
+    if (!(p.providno && p.alfaMoguca)) {
+      x.fillStyle = p.boja;
+      x.fillRect(0, 0, w, h);
+    }
+
+    var sw = src.width || src.naturalWidth;
+    var sh = src.height || src.naturalHeight;
+    var sc, dw, dh;
+
+    if (p.rezim === 'stretch') {
+      x.drawImage(src, 0, 0, w, h);            // odnos stranica se ignoriše
+    } else {
+      // fit staje unutra, crop pokriva i višak ispada van canvasa
+      sc = p.rezim === 'fit' ? Math.min(w / sw, h / sh) : Math.max(w / sw, h / sh);
+      dw = sw * sc; dh = sh * sc;
+      x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    }
+    return c;
+  }
+
   // ---- obrada ----
 
   // ---- UI ----
@@ -316,6 +412,7 @@
           renderRed(stavke[sledeciZaCrtanje]);
           sledeciZaCrtanje++;
         }
+        trenutniPregled();
       });
     })(lista[i], baza + i);
   }
@@ -440,6 +537,37 @@
     proveri('kb: megabajti', kb(3 * 1024 * 1024), '3.00 MB');
     proveri('kb: nepoznato', kb(null), '—');
 
+    // uzorak 100×50, levo crveno, desno plavo
+    var uz = document.createElement('canvas');
+    uz.width = 100; uz.height = 50;
+    var ux = uz.getContext('2d');
+    ux.fillStyle = '#ff0000'; ux.fillRect(0, 0, 50, 50);
+    ux.fillStyle = '#0000ff'; ux.fillRect(50, 0, 50, 50);
+
+    function piksel(c, x, y) {
+      var d = c.getContext('2d').getImageData(x, y, 1, 1).data;
+      return [d[0], d[1], d[2], d[3]];
+    }
+
+    var izl = nacrtaj(uz, 200, 200, { rezim: 'stretch', boja: '#00ff00', providno: false, alfaMoguca: false });
+    proveri('stretch: dimenzije', [izl.width, izl.height], [200, 200]);
+    proveri('stretch: popunjava ceo canvas, bez pozadine', piksel(izl, 10, 190), [255, 0, 0, 255]);
+
+    izl = nacrtaj(uz, 200, 200, { rezim: 'fit', boja: '#00ff00', providno: false, alfaMoguca: false });
+    proveri('fit: dimenzije', [izl.width, izl.height], [200, 200]);
+    proveri('fit: trake su boja pozadine', piksel(izl, 10, 10), [0, 255, 0, 255]);
+    proveri('fit: sredina je slika', piksel(izl, 10, 100), [255, 0, 0, 255]);
+
+    izl = nacrtaj(uz, 200, 200, { rezim: 'crop', boja: '#00ff00', providno: false, alfaMoguca: false });
+    proveri('crop: dimenzije', [izl.width, izl.height], [200, 200]);
+    proveri('crop: nema traka pozadine', piksel(izl, 10, 10), [255, 0, 0, 255]);
+
+    izl = nacrtaj(uz, 200, 200, { rezim: 'fit', boja: '#00ff00', providno: true, alfaMoguca: true });
+    proveri('providno: trake ostaju prozirne', piksel(izl, 10, 10)[3], 0);
+
+    izl = nacrtaj(uz, 200, 200, { rezim: 'fit', boja: '#00ff00', providno: true, alfaMoguca: false });
+    proveri('providno se ignoriše kad format ne ume alfa', piksel(izl, 10, 10), [0, 255, 0, 255]);
+
     // ---- ispis ----
     var pre = document.createElement('pre');
     pre.style.cssText = 'padding:20px;font:13px/1.7 ui-monospace,Consolas,monospace;white-space:pre-wrap';
@@ -455,6 +583,57 @@
   if (location.hash === '#test') { samoprovera(); return; }
 
   // ---- inicijalizacija UI-ja (kasniji zadaci dopunjuju ovaj deo) ----
+
+  // Nacrtaj trenutni pregled na osnovu prve ispravne stavke i trenutnog state-a.
+  function trenutniPregled() {
+    var s = null, i;
+    for (i = 0; i < stavke.length; i++) if (!stavke[i].greska) { s = stavke[i]; break; }
+    if (!s) { $('pregledInfo').textContent = ''; return; }
+
+    var d = racunajDimenzije(s.w, s.h, state);
+    var izlaz = nacrtaj(s.src, d.w, d.h, {
+      rezim: state.rezim, boja: state.boja,
+      providno: state.providno, alfaMoguca: true
+    });
+    var cv = $('cv');
+    cv.width = izlaz.width; cv.height = izlaz.height;
+    cv.getContext('2d').drawImage(izlaz, 0, 0);
+    $('pregledInfo').textContent = d.w + ' × ' + d.h + ' px';
+  }
+
+  // Upiši state u kontrole trake i uskladi vidljivost/aktivno dugme.
+  function renderIzgled() {
+    $('w').value = state.w;
+    $('h').value = state.h;
+    $('jedinica').value = state.jedinica;
+    $('dpi').value = state.dpi;
+    $('boja').value = state.boja;
+    $('providno').checked = state.providno;
+    $('neUvecavaj').checked = state.neUvecavaj;
+
+    $('dpiFld').classList.toggle('hidden', state.jedinica !== 'cm' && state.jedinica !== 'inch');
+
+    var dugmad = document.querySelectorAll('.mode');
+    for (var i = 0; i < dugmad.length; i++) {
+      dugmad[i].classList.toggle('on', dugmad[i].getAttribute('data-rezim') === state.rezim);
+    }
+  }
+
+  $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); };
+  $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); };
+  $('jedinica').onchange = function () { state.jedinica = this.value; renderIzgled(); trenutniPregled(); };
+  $('dpi').oninput = function () { state.dpi = Number(this.value) || 96; renderIzgled(); trenutniPregled(); };
+  $('boja').oninput = function () { state.boja = this.value; renderIzgled(); trenutniPregled(); };
+  $('providno').onchange = function () { state.providno = this.checked; renderIzgled(); trenutniPregled(); };
+  $('neUvecavaj').onchange = function () { state.neUvecavaj = this.checked; renderIzgled(); trenutniPregled(); };
+
+  var modeDugmad = document.querySelectorAll('.mode');
+  for (var mi = 0; mi < modeDugmad.length; mi++) (function (b) {
+    b.onclick = function () { state.rezim = b.getAttribute('data-rezim'); renderIzgled(); trenutniPregled(); };
+  })(modeDugmad[mi]);
+
+  renderIzgled();
+  trenutniPregled();
 })();
 </script>
 </body>
