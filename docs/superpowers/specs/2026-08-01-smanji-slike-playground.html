@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smanji slike — playground</title>
+<style>
+  :root {
+    --pg-bg: #101216;
+    --pg-panel: #181b21;
+    --pg-border: #272c35;
+    --pg-text: #e7eaf0;
+    --pg-muted: #8b93a1;
+    --pg-accent: #5b8dff;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--pg-bg);
+    color: var(--pg-text);
+    font-size: 14px;
+  }
+  .pg {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: 1fr auto;
+    height: 100vh;
+  }
+
+  /* ---------- levi panel: kontrole playground-a ---------- */
+  .controls {
+    grid-row: 1 / 3;
+    border-right: 1px solid var(--pg-border);
+    background: var(--pg-panel);
+    overflow-y: auto;
+    padding: 18px 16px 40px;
+  }
+  .controls h2 {
+    font-size: 13px;
+    margin: 0 0 3px;
+    letter-spacing: .2px;
+  }
+  .controls .tag {
+    font-size: 11px;
+    color: var(--pg-muted);
+    margin: 0 0 18px;
+    line-height: 1.5;
+  }
+  .grp { margin-bottom: 22px; }
+  .grp > h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--pg-muted);
+    margin: 0 0 9px;
+    font-weight: 700;
+  }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .row > label { flex: 0 0 88px; font-size: 12px; color: var(--pg-muted); }
+  .row > .fill { flex: 1 1 auto; min-width: 0; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: inherit;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--pg-border);
+    background: transparent;
+    color: var(--pg-text);
+    cursor: pointer;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .chip:hover { border-color: var(--pg-accent); }
+  .chip.on {
+    background: var(--pg-accent);
+    border-color: var(--pg-accent);
+    color: #0d1017;
+    font-weight: 650;
+  }
+  .controls select, .controls input[type=number], .controls input[type=text] {
+    font: inherit;
+    font-size: 12px;
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 7px;
+    border: 1px solid var(--pg-border);
+    background: var(--pg-bg);
+    color: var(--pg-text);
+    outline: none;
+  }
+  .controls input[type=range] { width: 100%; accent-color: var(--pg-accent); }
+  .val { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 11px; color: var(--pg-muted); min-width: 46px; text-align: right; }
+  .swap { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--pg-muted); cursor: pointer; margin-bottom: 8px; }
+  .swap input { accent-color: var(--pg-accent); }
+  .hint { font-size: 11px; color: var(--pg-muted); line-height: 1.5; margin: 10px 0 0; }
+  .hint code { font-family: ui-monospace, Consolas, monospace; color: var(--pg-text); }
+
+  /* ---------- scena sa maketom aplikacije ---------- */
+  .stage {
+    overflow: auto;
+    padding: 26px 26px 10px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .stage-inner { width: 100%; max-width: 900px; }
+  .stage-note {
+    font-size: 11px;
+    color: var(--pg-muted);
+    margin: 0 0 10px;
+  }
+
+  /* ---------- maketa: sopstvene promenljive, kao u prevodiocu ---------- */
+  .app {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --border: #dfe1e6;
+    --text: #1b1f23;
+    --muted: #6b7280;
+    --accent: hsl(222 85% 56%);
+    --accent-hover: hsl(222 70% 46%);
+    --ok: #16a34a;
+    --err: #d92d20;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+    --pad: 10px;
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 14px;
+    padding: 18px 16px 20px;
+    border: 1px solid var(--pg-border);
+  }
+  .app.dark {
+    --bg: #14161a;
+    --panel: #1c1f25;
+    --border: #2c313a;
+    --text: #e8eaed;
+    --muted: #9aa1ac;
+    --accent: hsl(222 100% 68%);
+    --accent-hover: hsl(222 100% 76%);
+    --ok: #4ade80;
+    --err: #ff7b72;
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+  .app.gusto { --pad: 5px; }
+
+  .app h1 { font-size: 20px; margin: 0 0 4px; font-weight: 650; }
+  .app .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+
+  .app .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .app .bar .lbl { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .app .bar .sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 2px; }
+  .app select, .app input[type=number] {
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 7px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  .app select:focus, .app input:focus { border-color: var(--accent); }
+  .app input[type=number] { width: 66px; }
+  .app input[type=range] { accent-color: var(--accent); width: 108px; vertical-align: middle; }
+  .app input[type=color] {
+    width: 30px; height: 26px; padding: 0;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); cursor: pointer;
+  }
+  .app button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .app button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .app button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .app button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+  .app .mode { min-width: 62px; }
+  .app .mode.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .app .chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .app .chk input { accent-color: var(--accent); }
+  .app .hidden { display: none !important; }
+
+  .app .drop {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    background: var(--panel);
+    margin-bottom: 14px;
+  }
+  .app .drop b { color: var(--accent); font-weight: 600; }
+
+  .app .split { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .app.sidebar .split { grid-template-columns: 216px 1fr; align-items: start; }
+  .app.sidebar .bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 0;
+  }
+  .app.sidebar .bar .sep { display: none; }
+  .app.sidebar .bar .fld { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+
+  .app .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .app .card-head {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .canvas-wrap {
+    padding: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 240px;
+    background-color: var(--panel);
+    background-image:
+      linear-gradient(45deg, rgba(128,128,128,.16) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(128,128,128,.16) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(128,128,128,.16) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.16) 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+  .canvas-wrap canvas {
+    max-width: 100%;
+    max-height: 320px;
+    display: block;
+    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  }
+
+  .app table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .app th {
+    text-align: left;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    font-weight: 700;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .app td { padding: var(--pad) 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .app tr:last-child td { border-bottom: 0; }
+  .app td.num { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; white-space: nowrap; }
+  .app .thumb {
+    width: 34px; height: 34px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+    border: 1px solid var(--border);
+  }
+  .app .save { color: var(--ok); font-weight: 650; font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; }
+  .app .bad { color: var(--err); }
+  .app .fname { font-weight: 550; }
+  .app .zipbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .app .prog {
+    height: 4px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .app .prog > i { display: block; height: 100%; width: 72%; background: var(--accent); }
+
+  /* ---------- prompt ---------- */
+  .promptbar {
+    border-top: 1px solid var(--pg-border);
+    background: var(--pg-panel);
+    padding: 12px 26px 14px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .promptbar pre {
+    flex: 1 1 auto;
+    margin: 0;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: var(--pg-text);
+    max-height: 108px;
+    overflow-y: auto;
+  }
+  #kopiraj {
+    flex: 0 0 auto;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--pg-accent);
+    background: var(--pg-accent);
+    color: #0d1017;
+    cursor: pointer;
+  }
+  #kopiraj.ok { background: transparent; color: #4ade80; border-color: #4ade80; }
+
+  @media (max-width: 900px) {
+    .pg { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+    .controls { grid-row: auto; border-right: 0; border-bottom: 1px solid var(--pg-border); }
+    .app.sidebar .split { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="pg">
+
+  <!-- ================= levi panel ================= -->
+  <aside class="controls">
+    <h2>Smanji slike — maketa</h2>
+    <p class="tag">Desno je makete UI-ja iz specifikacije. Kontrole <em>u samoj maketi</em> su prave — pregled slike i veličine fajla se stvarno računaju kroz Canvas API, isto kao što će raditi gotov alat. Ovde levo su samo izgled i uzorak.</p>
+
+    <div class="grp">
+      <h3>Presetovi</h3>
+      <div class="chips" id="presets"></div>
+    </div>
+
+    <div class="grp">
+      <h3>Uzorak slike</h3>
+      <div class="chips" id="uzorci"></div>
+      <p class="hint">Krug i kvadrat u uzorku su tu namerno — na <code>Stretch</code> se odmah vidi izobličenje.</p>
+      <div class="row" style="margin-top:10px">
+        <label>Svoja slika</label>
+        <input class="fill" type="file" id="svoja" accept="image/*" style="font-size:11px;padding:4px">
+      </div>
+    </div>
+
+    <div class="grp">
+      <h3>Izgled aplikacije</h3>
+      <div class="row">
+        <label>Raspored</label>
+        <div class="fill chips" id="raspored"></div>
+      </div>
+      <div class="row">
+        <label>Gustina</label>
+        <div class="fill chips" id="gustina"></div>
+      </div>
+      <div class="row">
+        <label>Tema</label>
+        <div class="fill chips" id="tema"></div>
+      </div>
+      <div class="row">
+        <label>Akcent</label>
+        <input class="fill" type="range" id="akcent" min="0" max="360" step="1">
+        <span class="val" id="akcentVal"></span>
+      </div>
+      <label class="swap"><input type="checkbox" id="slicice"> Sličice u tabeli</label>
+      <label class="swap"><input type="checkbox" id="greska"> Prikaži red sa greškom</label>
+      <label class="swap"><input type="checkbox" id="progres"> Prikaži progres traku</label>
+    </div>
+
+    <p class="hint">Sve što vidiš radi bez mreže. Otvori DevTools → Network: nema nijednog zahteva.</p>
+  </aside>
+
+  <!-- ================= scena ================= -->
+  <main class="stage">
+    <div class="stage-inner">
+      <p class="stage-note">Brojevi u tabeli su stvarni — svaki uzorak se zaista enkodira kroz <code>canvas.toBlob</code> sa izabranim formatom i quality-jem.</p>
+
+      <div class="app" id="app">
+        <h1>Smanji slike</h1>
+        <p class="sub">Sve ostaje na tvom uređaju. Bez uploada, bez naloga, bez ograničenja.</p>
+
+        <div class="split">
+          <!-- traka sa pravim kontrolama alata -->
+          <div class="bar">
+            <div class="fld">
+              <span class="lbl">Dimenzije</span>
+              <input type="number" id="w" placeholder="W" min="1">
+              <span class="lbl">×</span>
+              <input type="number" id="h" placeholder="H" min="1">
+              <select id="jedinica">
+                <option value="percent">percent</option>
+                <option value="pixels">pixels</option>
+                <option value="cm">centimeters</option>
+                <option value="inch">inches</option>
+              </select>
+            </div>
+
+            <div class="fld hidden" id="dpiFld">
+              <span class="lbl">DPI</span>
+              <input type="number" id="dpi" min="1" step="1">
+            </div>
+
+            <span class="sep"></span>
+
+            <div class="fld">
+              <span class="lbl">Režim</span>
+              <button class="mode" data-rezim="stretch">Stretch</button>
+              <button class="mode" data-rezim="crop">Crop</button>
+              <button class="mode" data-rezim="fit">Fit</button>
+            </div>
+
+            <span class="sep"></span>
+
+            <div class="fld">
+              <span class="lbl">Format</span>
+              <select id="format">
+                <option value="original">Original</option>
+                <option value="jpg">JPG</option>
+                <option value="png">PNG</option>
+                <option value="webp">WEBP</option>
+              </select>
+            </div>
+
+            <div class="fld" id="kvalFld">
+              <span class="lbl">Quality</span>
+              <input type="range" id="quality" min="1" max="100" step="1">
+              <span class="lbl" id="qualityVal" style="font-family:ui-monospace,Consolas,monospace"></span>
+            </div>
+
+            <span class="sep"></span>
+
+            <div class="fld">
+              <span class="lbl">Pozadina</span>
+              <input type="color" id="boja">
+              <label class="chk" id="provFld"><input type="checkbox" id="providno"> providno</label>
+            </div>
+
+            <span class="sep"></span>
+
+            <div class="fld">
+              <label class="chk"><input type="checkbox" id="neUvecavaj"> ne uvećavaj</label>
+            </div>
+          </div>
+
+          <div>
+            <div class="drop">Prevuci slike ovde ili <b>izaberi fajlove</b> &nbsp;·&nbsp; JPG, PNG, WEBP, GIF</div>
+
+            <div class="prog hidden" id="prog"><i></i></div>
+
+            <div class="card">
+              <div class="card-head">
+                <span>Pregled</span>
+                <span id="pregledInfo"></span>
+              </div>
+              <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span>Rezultati</span><span id="brojInfo"></span></div>
+              <table>
+                <thead>
+                  <tr>
+                    <th id="thThumb"></th>
+                    <th>Fajl</th>
+                    <th>Original</th>
+                    <th>Novo</th>
+                    <th>Ušteda</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="redovi"></tbody>
+              </table>
+            </div>
+
+            <div class="zipbar">
+              <span id="zbir"></span>
+              <button class="primary">Preuzmi sve (ZIP)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= prompt ================= -->
+  <div class="promptbar">
+    <pre id="prompt"></pre>
+    <button id="kopiraj">Kopiraj prompt</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------- stanje
+  var DEFAULTS = {
+    uzorak: 'pejzaz',
+    jedinica: 'pixels',
+    w: 1600, h: '',
+    dpi: 96,
+    rezim: 'fit',
+    format: 'webp',
+    quality: 82,
+    boja: '#ffffff',
+    providno: false,
+    neUvecavaj: true,
+    raspored: 'traka',
+    gustina: 'normalna',
+    tema: 'svetla',
+    akcent: 222,
+    slicice: true,
+    greska: true,
+    progres: false
+  };
+  var state = {};
+  for (var k in DEFAULTS) state[k] = DEFAULTS[k];
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ------------------------------------------------------- uzorci (canvas)
+  var UZORCI = [
+    { id: 'pejzaz',   ime: 'Pejzaž 3:2',   fajl: 'IMG_2013.jpg',       w: 1500, h: 1000, alfa: false },
+    { id: 'portret',  ime: 'Portret 2:3',  fajl: 'portret-ana.jpg',    w: 1000, h: 1500, alfa: false },
+    { id: 'kvadrat',  ime: 'Kvadrat 1:1',  fajl: 'logo-kvadrat.png',   w: 1200, h: 1200, alfa: false },
+    { id: 'providna', ime: 'Providna PNG', fajl: 'potpis-providno.png', w: 1200, h: 900,  alfa: true }
+  ];
+  var kes = {};      // id -> canvas
+  var origBajta = {}; // id -> broj bajtova "originala"
+
+  function napraviUzorak(sp) {
+    var c = document.createElement('canvas');
+    c.width = sp.w; c.height = sp.h;
+    var x = c.getContext('2d');
+    var W = sp.w, H = sp.h;
+
+    if (sp.alfa) {
+      // providna: samo oblik u sredini, pozadina ostaje prazna
+      x.strokeStyle = '#e0245e';
+      x.lineWidth = Math.round(Math.min(W, H) * 0.035);
+      x.beginPath();
+      x.arc(W / 2, H / 2, Math.min(W, H) * 0.3, 0, Math.PI * 2);
+      x.stroke();
+      x.fillStyle = '#1d9bf0';
+      x.fillRect(W * 0.5 - Math.min(W, H) * 0.14, H * 0.5 - Math.min(W, H) * 0.14,
+                 Math.min(W, H) * 0.28, Math.min(W, H) * 0.28);
+    } else {
+      var g = x.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#2f5fa8');
+      g.addColorStop(0.55, '#7fb3e8');
+      g.addColorStop(1, '#e9d7a8');
+      x.fillStyle = g;
+      x.fillRect(0, 0, W, H);
+
+      x.fillStyle = '#ffd76e';
+      x.beginPath();
+      x.arc(W * 0.76, H * 0.24, Math.min(W, H) * 0.09, 0, Math.PI * 2);
+      x.fill();
+
+      x.fillStyle = '#3f6b4a';
+      x.beginPath();
+      x.moveTo(0, H);
+      x.lineTo(W * 0.28, H * 0.52);
+      x.lineTo(W * 0.52, H);
+      x.closePath(); x.fill();
+
+      x.fillStyle = '#31543c';
+      x.beginPath();
+      x.moveTo(W * 0.34, H);
+      x.lineTo(W * 0.66, H * 0.42);
+      x.lineTo(W, H);
+      x.closePath(); x.fill();
+    }
+
+    // mreža + krug + kvadrat: pokazuju izobličenje kod Stretch
+    x.strokeStyle = 'rgba(255,255,255,.32)';
+    x.lineWidth = Math.max(1, Math.round(Math.min(W, H) / 500));
+    var korak = Math.round(Math.min(W, H) / 10), i;
+    for (i = korak; i < W; i += korak) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, H); x.stroke(); }
+    for (i = korak; i < H; i += korak) { x.beginPath(); x.moveTo(0, i); x.lineTo(W, i); x.stroke(); }
+
+    var r = Math.min(W, H) * 0.22;
+    x.strokeStyle = 'rgba(255,255,255,.95)';
+    x.lineWidth = Math.max(3, Math.round(Math.min(W, H) / 130));
+    x.beginPath(); x.arc(W / 2, H / 2, r, 0, Math.PI * 2); x.stroke();
+    x.strokeRect(W / 2 - r, H / 2 - r, r * 2, r * 2);
+
+    x.fillStyle = 'rgba(0,0,0,.62)';
+    var fs = Math.round(Math.min(W, H) * 0.052);
+    x.font = '700 ' + fs + 'px sans-serif';
+    x.textAlign = 'center';
+    x.fillText(W + ' × ' + H, W / 2, H - fs * 0.9);
+    return c;
+  }
+
+  function uzorak(id) {
+    if (!kes[id]) {
+      var sp = najdiUzorak(id);
+      kes[id] = napraviUzorak(sp);
+    }
+    return kes[id];
+  }
+  function najdiUzorak(id) {
+    for (var i = 0; i < UZORCI.length; i++) if (UZORCI[i].id === id) return UZORCI[i];
+    return UZORCI[0];
+  }
+
+  // --------------------------------------------- cevovod (kao u specifikaciji)
+
+  // 1. dimenzije — čista funkcija, bez DOM-a
+  function racunajDimenzije(pw, ph, s) {
+    function uPiksele(v) {
+      if (s.jedinica === 'percent') return null;              // rešava se posebno
+      if (s.jedinica === 'pixels') return v;
+      if (s.jedinica === 'cm') return v / 2.54 * s.dpi;
+      return v * s.dpi;                                        // inches
+    }
+    var W = s.w === '' || s.w === null ? null : Number(s.w);
+    var H = s.h === '' || s.h === null ? null : Number(s.h);
+    if (W !== null && !(W > 0)) W = null;
+    if (H !== null && !(H > 0)) H = null;
+
+    var w = null, h = null;
+    if (s.jedinica === 'percent') {
+      if (W !== null) w = pw * W / 100;
+      if (H !== null) h = ph * H / 100;
+    } else {
+      if (W !== null) w = uPiksele(W);
+      if (H !== null) h = uPiksele(H);
+    }
+
+    if (w === null && h === null) { w = pw; h = ph; }          // oba prazna → original
+    else if (w === null) w = h * pw / ph;                      // izvedi iz odnosa
+    else if (h === null) h = w * ph / pw;
+
+    // ne uvećavaj: skaliraj ciljni okvir naniže dok ne stane u original,
+    // uz očuvan odnos zadatog okvira
+    if (s.neUvecavaj) {
+      var f = Math.min(1, pw / w, ph / h);
+      w *= f; h *= f;
+    }
+
+    return { w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)) };
+  }
+
+  // 2. crtanje — Stretch / Fit / Crop
+  function nacrtaj(src, w, h, s, alfaMoguca) {
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var x = c.getContext('2d');
+    x.imageSmoothingQuality = 'high';
+
+    var providnoOk = s.providno && alfaMoguca;
+    if (!providnoOk) { x.fillStyle = s.boja; x.fillRect(0, 0, w, h); }
+
+    var sw = src.width, sh = src.height, sc, dw, dh;
+    if (s.rezim === 'stretch') {
+      x.drawImage(src, 0, 0, w, h);
+    } else if (s.rezim === 'fit') {
+      sc = Math.min(w / sw, h / sh);
+      dw = sw * sc; dh = sh * sc;
+      x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    } else { // crop
+      sc = Math.max(w / sw, h / sh);
+      dw = sw * sc; dh = sh * sc;
+      x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    }
+    return c;
+  }
+
+  // 3. format i kodiranje
+  function mimeZa(s, alfa) {
+    if (s.format === 'jpg') return 'image/jpeg';
+    if (s.format === 'png') return 'image/png';
+    if (s.format === 'webp') return 'image/webp';
+    return alfa ? 'image/png' : 'image/jpeg';                  // original
+  }
+  function alfaMoguca(s, alfa) {
+    var m = mimeZa(s, alfa);
+    return m !== 'image/jpeg';
+  }
+  function uKodiraj(c, mime, q, cb) {
+    c.toBlob(function (b) { cb(b ? b.size : null); }, mime, q / 100);
+  }
+
+  // ------------------------------------------------------------- pomoćne
+  function kb(b) {
+    if (b === null || b === undefined) return '—';
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+    return (b / 1024 / 1024).toFixed(2) + ' MB';
+  }
+  function nastavak(s, alfa) {
+    var m = mimeZa(s, alfa);
+    return m === 'image/jpeg' ? 'jpg' : m === 'image/png' ? 'png' : 'webp';
+  }
+  function preimenuj(fajl, s, alfa) {
+    return fajl.replace(/\.[^.]+$/, '') + '.' + nastavak(s, alfa);
+  }
+
+  // izmeri "originalnu" veličinu uzorka jednom
+  function izmeriOriginale(gotovo) {
+    var ostalo = UZORCI.length;
+    UZORCI.forEach(function (sp) {
+      var c = uzorak(sp.id);
+      c.toBlob(function (b) {
+        origBajta[sp.id] = b ? b.size : 0;
+        if (--ostalo === 0) gotovo();
+      }, sp.alfa ? 'image/png' : 'image/jpeg', 0.9);
+    });
+  }
+
+  // ------------------------------------------------------------- render
+  var token = 0;
+
+  function renderPregled() {
+    var sp = najdiUzorak(state.uzorak);
+    var src = state.uzorak === 'svoja' && kes.svoja ? kes.svoja : uzorak(state.uzorak);
+    var alfa = state.uzorak === 'svoja' ? true : sp.alfa;
+
+    var d = racunajDimenzije(src.width, src.height, state);
+    var izlaz = nacrtaj(src, d.w, d.h, state, alfaMoguca(state, alfa));
+
+    var cv = $('cv');
+    cv.width = izlaz.width; cv.height = izlaz.height;
+    cv.getContext('2d').drawImage(izlaz, 0, 0);
+
+    var moj = ++token;
+    $('pregledInfo').textContent = d.w + ' × ' + d.h + ' px · ' + nastavak(state, alfa).toUpperCase() + ' · računam…';
+    uKodiraj(izlaz, mimeZa(state, alfa), state.quality, function (bajta) {
+      if (moj !== token) return;
+      var orig = origBajta[state.uzorak] || 0;
+      var ust = orig && bajta ? Math.round((1 - bajta / orig) * 100) : null;
+      $('pregledInfo').textContent =
+        d.w + ' × ' + d.h + ' px · ' + nastavak(state, alfa).toUpperCase() + ' · ' + kb(bajta) +
+        (ust !== null ? '  (' + (ust >= 0 ? '−' : '+') + Math.abs(ust) + '%)' : '');
+    });
+  }
+
+  var tajmer = null;
+  function renderTabelu() {
+    clearTimeout(tajmer);
+    tajmer = setTimeout(stvarnoRenderTabelu, 140);
+  }
+
+  function stvarnoRenderTabelu() {
+    var tb = $('redovi');
+    tb.innerHTML = '';
+    $('thThumb').style.display = state.slicice ? '' : 'none';
+
+    var ukupnoOrig = 0, ukupnoNovo = 0, gotovih = 0, ceka = UZORCI.length;
+
+    UZORCI.forEach(function (sp) {
+      var src = uzorak(sp.id);
+      var d = racunajDimenzije(src.width, src.height, state);
+      var izlaz = nacrtaj(src, d.w, d.h, state, alfaMoguca(state, sp.alfa));
+
+      var tr = document.createElement('tr');
+      var td = '';
+      if (state.slicice) {
+        var mala = document.createElement('canvas');
+        mala.width = 68; mala.height = 68;
+        var mx = mala.getContext('2d');
+        var sc = Math.max(68 / izlaz.width, 68 / izlaz.height);
+        mx.drawImage(izlaz, (68 - izlaz.width * sc) / 2, (68 - izlaz.height * sc) / 2,
+                     izlaz.width * sc, izlaz.height * sc);
+        td += '<td><img class="thumb" src="' + mala.toDataURL() + '" alt=""></td>';
+      }
+      td += '<td class="fname">' + preimenuj(sp.fajl, state, sp.alfa) + '</td>';
+      td += '<td class="num">' + sp.w + '×' + sp.h + ' · ' + kb(origBajta[sp.id]) + '</td>';
+      td += '<td class="num" data-novo>' + d.w + '×' + d.h + ' · …</td>';
+      td += '<td class="save" data-ust>…</td>';
+      td += '<td style="text-align:right"><button>Preuzmi</button></td>';
+      tr.innerHTML = td;
+      tb.appendChild(tr);
+
+      ukupnoOrig += origBajta[sp.id] || 0;
+      uKodiraj(izlaz, mimeZa(state, sp.alfa), state.quality, function (bajta) {
+        tr.querySelector('[data-novo]').textContent = d.w + '×' + d.h + ' · ' + kb(bajta);
+        var o = origBajta[sp.id] || 0;
+        var u = o && bajta ? Math.round((1 - bajta / o) * 100) : 0;
+        var el = tr.querySelector('[data-ust]');
+        el.textContent = (u >= 0 ? '−' : '+') + Math.abs(u) + '%';
+        if (u < 0) el.className = 'bad';
+        ukupnoNovo += bajta || 0;
+        gotovih++;
+        if (gotovih === ceka) {
+          var uk = ukupnoOrig ? Math.round((1 - ukupnoNovo / ukupnoOrig) * 100) : 0;
+          $('zbir').textContent = ceka + ' slika · ' + kb(ukupnoOrig) + ' → ' + kb(ukupnoNovo) +
+                                  '  (−' + uk + '%)';
+        }
+      });
+    });
+
+    if (state.greska) {
+      var tre = document.createElement('tr');
+      var h = '';
+      if (state.slicice) h += '<td><div class="thumb" style="display:flex;align-items:center;justify-content:center;font-size:16px">⚠</div></td>';
+      h += '<td class="fname bad">beleska.txt.jpg</td>';
+      h += '<td class="num">—</td>';
+      h += '<td class="bad" colspan="2">Nije podržana slika</td>';
+      h += '<td style="text-align:right"><button disabled style="opacity:.4">Preuzmi</button></td>';
+      tre.innerHTML = h;
+      tb.appendChild(tre);
+    }
+
+    $('brojInfo').textContent = (UZORCI.length + (state.greska ? 1 : 0)) + ' fajlova';
+  }
+
+  // ------------------------------------------------------------ izgled
+  function renderIzgled() {
+    var app = $('app');
+    app.className = 'app' +
+      (state.tema === 'tamna' ? ' dark' : '') +
+      (state.gustina === 'kompaktna' ? ' gusto' : '') +
+      (state.raspored === 'sidebar' ? ' sidebar' : '');
+    app.style.setProperty('--accent', 'hsl(' + state.akcent + ' 85% 56%)');
+    app.style.setProperty('--accent-hover', 'hsl(' + state.akcent + ' 70% 46%)');
+    $('akcentVal').textContent = state.akcent + '°';
+
+    // vidljivost polja koja zavise od izbora
+    $('dpiFld').classList.toggle('hidden', state.jedinica !== 'cm' && state.jedinica !== 'inch');
+    var pngIliWebp = state.format === 'png' || state.format === 'webp' || state.format === 'original';
+    $('provFld').classList.toggle('hidden', !pngIliWebp);
+    var kval = state.format !== 'png';
+    $('kvalFld').classList.toggle('hidden', !kval);
+    $('prog').classList.toggle('hidden', !state.progres);
+
+    // sinhronizuj kontrole u maketi
+    $('w').value = state.w;
+    $('h').value = state.h;
+    $('dpi').value = state.dpi;
+    $('jedinica').value = state.jedinica;
+    $('format').value = state.format;
+    $('quality').value = state.quality;
+    $('qualityVal').textContent = state.quality;
+    $('boja').value = state.boja;
+    $('providno').checked = state.providno;
+    $('neUvecavaj').checked = state.neUvecavaj;
+    var btns = document.querySelectorAll('.mode');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', btns[i].getAttribute('data-rezim') === state.rezim);
+    }
+  }
+
+  // ------------------------------------------------------------ prompt
+  function updatePrompt() {
+    var d = [];
+
+    if (state.jedinica !== DEFAULTS.jedinica) d.push('jedinica ' + state.jedinica);
+    if (String(state.w) !== String(DEFAULTS.w)) d.push('širina ' + (state.w === '' ? 'prazna' : state.w));
+    if (String(state.h) !== String(DEFAULTS.h)) d.push('visina ' + (state.h === '' ? 'prazna' : state.h));
+    if (state.dpi !== DEFAULTS.dpi) d.push('DPI ' + state.dpi);
+    if (state.rezim !== DEFAULTS.rezim) d.push('režim ' + state.rezim);
+    if (state.format !== DEFAULTS.format) d.push('format ' + state.format.toUpperCase());
+    if (state.quality !== DEFAULTS.quality) d.push('quality ' + state.quality);
+    if (state.boja !== DEFAULTS.boja) d.push('boja pozadine ' + state.boja);
+    if (state.providno !== DEFAULTS.providno) d.push('„providno" ' + (state.providno ? 'uključeno' : 'isključeno'));
+    if (state.neUvecavaj !== DEFAULTS.neUvecavaj) d.push('„ne uvećavaj" ' + (state.neUvecavaj ? 'uključeno' : 'isključeno'));
+
+    var iz = [];
+    if (state.raspored !== DEFAULTS.raspored) {
+      iz.push(state.raspored === 'sidebar'
+        ? 'kontrole u uspravnoj koloni levo umesto u vodoravnoj traci'
+        : 'kontrole u vodoravnoj traci iznad rezultata');
+    }
+    if (state.gustina !== DEFAULTS.gustina) iz.push('kompaktna gustina tabele (padding 5px umesto 10px)');
+    if (state.slicice !== DEFAULTS.slicice) iz.push(state.slicice ? 'sličice u tabeli' : 'bez kolone sa sličicama');
+    if (state.akcent !== DEFAULTS.akcent) iz.push('akcent hsl(' + state.akcent + ' 85% 56%)');
+    if (state.progres !== DEFAULTS.progres) iz.push(state.progres ? 'progres traka stalno vidljiva' : 'progres traka samo tokom obrade');
+
+    var t = 'Video sam maketu za smanji-slike.html i to je to.';
+    if (d.length) {
+      t += '\n\nPodrazumevana podešavanja promeni na: ' + d.join(', ') + '.';
+    }
+    if (iz.length) {
+      t += '\n\nIzgled: ' + iz.join('; ') + '.';
+    }
+    if (!d.length && !iz.length) {
+      t += ' Zadrži sve podrazumevane vrednosti i izgled iz makete.';
+    }
+    t += '\n\nAžuriraj docs/superpowers/specs/2026-08-01-smanji-slike-design.md ako se nešto od ovoga kosi sa specifikacijom, pa nastavi na plan implementacije.';
+    $('prompt').textContent = t;
+  }
+
+  function updateAll() {
+    renderIzgled();
+    renderPregled();
+    renderTabelu();
+    updatePrompt();
+  }
+
+  // ------------------------------------------------------------- kontrole
+  function chips(host, opcije, kljuc, posle) {
+    var el = $(host);
+    el.innerHTML = '';
+    opcije.forEach(function (o) {
+      var b = document.createElement('button');
+      b.className = 'chip' + (state[kljuc] === o.v ? ' on' : '');
+      b.textContent = o.t;
+      b.onclick = function () {
+        state[kljuc] = o.v;
+        chips(host, opcije, kljuc, posle);
+        if (posle) posle();
+        updateAll();
+      };
+      el.appendChild(b);
+    });
+  }
+
+  chips('uzorci', UZORCI.map(function (s) { return { v: s.id, t: s.ime }; }), 'uzorak');
+  chips('raspored', [{ v: 'traka', t: 'Traka gore' }, { v: 'sidebar', t: 'Kolona levo' }], 'raspored');
+  chips('gustina', [{ v: 'normalna', t: 'Normalna' }, { v: 'kompaktna', t: 'Kompaktna' }], 'gustina');
+  chips('tema', [{ v: 'svetla', t: 'Svetla' }, { v: 'tamna', t: 'Tamna' }], 'tema');
+
+  // presetovi
+  var PRESETOVI = [
+    { t: 'Za mejl', s: { jedinica: 'percent', w: 50, h: '', rezim: 'fit', format: 'jpg', quality: 78, neUvecavaj: true } },
+    { t: 'Maks. 1600 px', s: { jedinica: 'pixels', w: 1600, h: '', rezim: 'fit', format: 'webp', quality: 82, neUvecavaj: true } },
+    { t: 'Ikonica 512²', s: { jedinica: 'pixels', w: 512, h: 512, rezim: 'crop', format: 'png', providno: true, neUvecavaj: false } },
+    { t: 'Štampa 15×10 cm', s: { jedinica: 'cm', w: 15, h: 10, dpi: 300, rezim: 'crop', format: 'jpg', quality: 92, neUvecavaj: false } },
+    { t: 'Samo kompresuj', s: { jedinica: 'pixels', w: '', h: '', rezim: 'fit', format: 'jpg', quality: 60, neUvecavaj: true } }
+  ];
+  var pel = $('presets');
+  PRESETOVI.forEach(function (p) {
+    var b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = p.t;
+    b.onclick = function () {
+      for (var kk in p.s) state[kk] = p.s[kk];
+      updateAll();
+    };
+    pel.appendChild(b);
+  });
+
+  // prekidači
+  ['slicice', 'greska', 'progres'].forEach(function (id) {
+    $(id).checked = state[id];
+    $(id).onchange = function () { state[id] = this.checked; updateAll(); };
+  });
+
+  $('akcent').value = state.akcent;
+  $('akcent').oninput = function () { state.akcent = Number(this.value); updateAll(); };
+
+  // kontrole u samoj maketi
+  $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); updateAll(); };
+  $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); updateAll(); };
+  $('dpi').oninput = function () { state.dpi = Number(this.value) || 96; updateAll(); };
+  $('jedinica').onchange = function () {
+    var staro = state.jedinica;
+    state.jedinica = this.value;
+    // razumna vrednost pri promeni jedinice, da pregled ne odleti
+    if (staro !== this.value) {
+      if (this.value === 'percent') { state.w = 50; state.h = ''; }
+      else if (this.value === 'pixels') { state.w = 1600; state.h = ''; }
+      else if (this.value === 'cm') { state.w = 15; state.h = 10; state.dpi = 300; }
+      else { state.w = 6; state.h = 4; state.dpi = 300; }
+    }
+    updateAll();
+  };
+  $('format').onchange = function () { state.format = this.value; updateAll(); };
+  $('quality').oninput = function () { state.quality = Number(this.value); updateAll(); };
+  $('boja').oninput = function () { state.boja = this.value; updateAll(); };
+  $('providno').onchange = function () { state.providno = this.checked; updateAll(); };
+  $('neUvecavaj').onchange = function () { state.neUvecavaj = this.checked; updateAll(); };
+  var mb = document.querySelectorAll('.mode');
+  for (var i = 0; i < mb.length; i++) {
+    mb[i].onclick = function () { state.rezim = this.getAttribute('data-rezim'); updateAll(); };
+  }
+
+  // svoja slika
+  $('svoja').onchange = function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var url = URL.createObjectURL(f);
+    var im = new Image();
+    im.onload = function () {
+      var c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      c.getContext('2d').drawImage(im, 0, 0);
+      kes.svoja = c;
+      origBajta.svoja = f.size;
+      UZORCI.push({ id: 'svoja', ime: 'Moja slika', fajl: f.name, w: c.width, h: c.height, alfa: /png|webp/i.test(f.type) });
+      state.uzorak = 'svoja';
+      chips('uzorci', UZORCI.map(function (s) { return { v: s.id, t: s.ime }; }), 'uzorak');
+      URL.revokeObjectURL(url);
+      updateAll();
+    };
+    im.src = url;
+  };
+
+  // kopiranje
+  $('kopiraj').onclick = function () {
+    var b = this;
+    var tekst = $('prompt').textContent;
+    function ok() { b.textContent = 'Kopirano!'; b.className = 'ok'; setTimeout(function () { b.textContent = 'Kopiraj prompt'; b.className = ''; }, 1400); }
+    if (navigator.clipboard) navigator.clipboard.writeText(tekst).then(ok, function () {});
+    else {
+      var ta = document.createElement('textarea');
+      ta.value = tekst; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); ok();
+    }
+  };
+
+  // WEBP se sklanja ako ga browser ne ume enkodovati (isto pravilo kao u specifikaciji)
+  (function () {
+    var t = document.createElement('canvas');
+    t.width = t.height = 1;
+    if (t.toDataURL('image/webp').indexOf('data:image/webp') !== 0) {
+      var o = $('format').querySelector('option[value=webp]');
+      if (o) o.parentNode.removeChild(o);
+      if (state.format === 'webp') state.format = 'jpg';
+      DEFAULTS.format = 'jpg';
+    }
+  })();
+
+  izmeriOriginale(updateAll);
+})();
+</script>
+</body>
+</html>

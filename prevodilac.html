@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prevodilac SR ⇄ DE</title>
+<meta name="description" content="Prevod srpski ⇄ nemački sa prepoznavanjem smera i kopiranjem prevoda.">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2f6fed">
+<link rel="icon" href="./icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Prevodilac">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --border: #dfe1e6;
+    --text: #1b1f23;
+    --muted: #6b7280;
+    --accent: #2f6fed;
+    --accent-hover: #2559c7;
+    --ok: #16a34a;
+    --err: #d92d20;
+    --warn: #b45309;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --panel: #1c1f25;
+      --border: #2c313a;
+      --text: #e8eaed;
+      --muted: #9aa1ac;
+      --accent: #5b8dff;
+      --accent-hover: #7aa2ff;
+      --ok: #4ade80;
+      --err: #ff7b72;
+      --warn: #f0b429;
+      --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 20px 16px 40px;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  header { margin-bottom: 14px; }
+  h1 { font-size: 20px; margin: 0 0 4px; font-weight: 650; }
+  .sub { color: var(--muted); font-size: 13px; }
+
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .bar label { color: var(--muted); font-weight: 600; }
+  .spacer { flex: 1 1 auto; }
+
+  select {
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  select:focus { border-color: var(--accent); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    min-height: 44px;
+  }
+  .card-head .btns { display: flex; gap: 6px; }
+
+  textarea, .out {
+    width: 100%;
+    min-height: 300px;
+    border: 0;
+    outline: none;
+    resize: vertical;
+    padding: 14px;
+    font-size: 16px;
+    line-height: 1.55;
+    font-family: inherit;
+    background: transparent;
+    color: var(--text);
+  }
+  .out { white-space: pre-wrap; overflow-y: auto; resize: none; }
+  .out.placeholder { color: var(--muted); }
+
+  button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    padding: 6px 11px;
+    border-radius: 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+  button.copied { border-color: var(--ok); color: var(--ok); }
+
+  .reg-group { display: inline-flex; gap: 4px; margin-right: 4px; }
+  button.reg { min-width: 40px; padding: 6px 9px; }
+  button.reg.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    min-height: 20px;
+  }
+  .status.err { color: var(--err); }
+  .status.warn { color: var(--warn); }
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 6px;
+    animation: pulse .9s infinite ease-in-out;
+    vertical-align: middle;
+  }
+  @keyframes pulse { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+  kbd {
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-family: inherit;
+  }
+  .hidden { display: none !important; }
+
+  /* ---- telefon ---- */
+  @media (max-width: 760px) {
+    body { padding: 12px 12px calc(20px + env(safe-area-inset-bottom, 0px)); }
+    h1 { font-size: 17px; }
+    header .sub { font-size: 12px; }
+    .grid { grid-template-columns: 1fr; gap: 12px; }
+    .bar { font-size: 14px; margin: 12px 0; padding: 10px; }
+    select { font-size: 15px; padding: 8px 10px; flex: 1 1 auto; }
+    .bar .sub { display: none; }
+    textarea, .out { min-height: 30vh; padding: 12px; }
+    .card-head { min-height: 50px; padding: 8px 10px; }
+    button { padding: 10px 12px; font-size: 14px; }
+    .kbdhint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Prevodilac <span id="dirLabel">srpski ⇄ nemački</span></h1>
+    <div class="sub">Kucaj ili zalepi tekst — jezik se prepoznaje sam, prevod stiže bez pritiskanja dugmeta.</div>
+  </header>
+
+  <div class="bar">
+    <label for="dirSel">Smer prevoda:</label>
+    <select id="dirSel">
+      <option value="auto">Automatski</option>
+      <option value="sr-de">Srpski → Nemački</option>
+      <option value="de-sr">Nemački → Srpski</option>
+    </select>
+    <span class="spacer"></span>
+    <span class="sub">Radi bez naloga i bez ključa.</span>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <div class="card-head">
+        <span id="srcLabel">Izvorni tekst</span>
+        <span class="btns">
+          <button id="swapBtn" title="Prebaci prevod u polje za unos">⇄ Zameni</button>
+          <button id="clearBtn">Obriši</button>
+        </span>
+      </div>
+      <textarea id="input" placeholder="Unesi tekst ovde..." spellcheck="false"></textarea>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <span id="dstLabel">Prevod</span>
+        <span class="btns">
+          <span id="regWrap" class="reg-group hidden">
+            <button id="sieBtn" class="reg" title="Formalno obraćanje — Sie">Sie</button>
+            <button id="duBtn" class="reg" title="Neformalno obraćanje — du">du</button>
+          </span>
+          <button id="speakBtn" title="Izgovori prevod" disabled>🔊</button>
+          <button id="copyBtn" class="primary" disabled>Kopiraj prevod</button>
+        </span>
+      </div>
+      <div id="output" class="out placeholder">Prevod će se pojaviti ovde.</div>
+    </section>
+  </div>
+
+  <div class="foot">
+    <span id="status"></span>
+    <span><span id="count">0</span> znakova<span class="kbdhint"> &nbsp;·&nbsp; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> prevedi odmah</span></span>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var input     = document.getElementById('input');
+  var output    = document.getElementById('output');
+  var copyBtn   = document.getElementById('copyBtn');
+  var speakBtn  = document.getElementById('speakBtn');
+  var clearBtn  = document.getElementById('clearBtn');
+  var swapBtn   = document.getElementById('swapBtn');
+  var status    = document.getElementById('status');
+  var count     = document.getElementById('count');
+  var srcLabel  = document.getElementById('srcLabel');
+  var dstLabel  = document.getElementById('dstLabel');
+  var dirLabel  = document.getElementById('dirLabel');
+  var dirSel    = document.getElementById('dirSel');
+  var regWrap   = document.getElementById('regWrap');
+  var sieBtn    = document.getElementById('sieBtn');
+  var duBtn     = document.getElementById('duBtn');
+
+  var NAMES = { sr: 'Srpski', de: 'Nemački' };
+  var LOCALE = { sr: 'sr-RS', de: 'de-DE' };
+
+  var STORE = 'prevodilac.v3';
+  var timer = null;
+  var reqId = 0;
+  var lastKey = '';
+  var target = 'de';   // trenutni ciljni jezik
+  var source = 'sr';
+  var rawOut = '';     // prevod pre prebacivanja registra
+  var register = null; // null | 'sie' | 'du'
+
+  // ---------- pomoćne ----------
+
+  function setStatus(text, cls) {
+    status.className = 'status' + (cls ? ' ' + cls : '');
+    status.innerHTML = '';
+    if (!text) return;
+    if (text === 'loading') {
+      status.innerHTML = '<span class="dot"></span>Prevodim…';
+    } else {
+      status.textContent = text;
+    }
+  }
+
+  function setLoading(label) {
+    status.className = 'status';
+    status.innerHTML = '<span class="dot"></span>';
+    status.appendChild(document.createTextNode(label || 'Prevodim…'));
+  }
+
+  function setOutput(text) {
+    var empty = !text;
+    output.textContent = empty ? 'Prevod će se pojaviti ovde.' : text;
+    output.classList.toggle('placeholder', empty);
+    copyBtn.disabled = empty;
+    speakBtn.disabled = empty || !('speechSynthesis' in window);
+  }
+
+  function outputText() {
+    return output.classList.contains('placeholder') ? '' : output.textContent;
+  }
+
+  function setDirection(src, dst) {
+    source = src; target = dst;
+    srcLabel.textContent = NAMES[src] || 'Izvorni tekst';
+    dstLabel.textContent = NAMES[dst] || 'Prevod';
+    dirLabel.textContent = (src === 'de' ? 'nemački → srpski' : 'srpski → nemački');
+    // Sie/du postoji samo kad je prevod na nemački.
+    regWrap.classList.toggle('hidden', dst !== 'de');
+  }
+
+  // Prikazuje prevod u izabranom registru (Sie / du / kako je prevedeno).
+  function renderOutput() {
+    var text = rawOut;
+    var changed = false;
+    if (text && target === 'de' && register) {
+      var conv = register === 'sie' ? toSie(text) : toDu(text);
+      changed = conv !== text;
+      text = conv;
+    }
+    setOutput(text);
+    sieBtn.classList.toggle('active', register === 'sie');
+    duBtn.classList.toggle('active', register === 'du');
+    return changed;
+  }
+
+  function setRegister(r) {
+    register = (register === r) ? null : r;   // ponovni klik vraća original
+    save();
+    var changed = renderOutput();
+    if (!rawOut) return;
+    if (!register) {
+      setStatus('Prikazan prevod bez izmena.');
+    } else if (changed) {
+      setStatus('Preinačeno u ' + (register === 'sie' ? 'Sie' : 'du') + '-oblik.');
+    } else {
+      setStatus('Prevod je već u ' + (register === 'sie' ? 'Sie' : 'du') + '-obliku.');
+    }
+  }
+
+  // Prepoznaje jezik lokalno. Servisova "auto" detekcija greši na kratkom
+  // srpskom tekstu (npr. "ko si ti" prepozna kao joruba), pa je ne koristimo.
+  var DE_WORDS = ('der die das dem den des ein eine einen einem einer und oder aber ist sind war waren '
+    + 'nicht kein keine ich du er sie es wir ihr mit fur von zu zum zur auf aus bei nach uber unter '
+    + 'haben hat habe hatte sein seine seinen ihre ihren mein meine dein deine bitte danke sehr '
+    + 'geehrte geehrter damen herren werden wird wurde kann konnen muss mussen soll sollen will '
+    + 'wollen darf dass wenn weil auch noch schon nur wie was wer wo wann warum welche heute morgen '
+    + 'gestern jahr jahre tag tage stunde uhr guten hallo tschuss bewerbung anbei freundlichen grussen').split(' ');
+
+  var SR_WORDS = ('je su sam si smo ste bio bila bilo biti da na za od do sa se ne ni nije nisu ovo ova '
+    + 'ovaj taj ta to koji koja koje kod gde sta ko kako kada zasto ali ili pa te jos samo vec ja ti on '
+    + 'ona ono mi vi oni one nas vas njih moj moja tvoj tvoja njegov njen hvala molim izvinite treba '
+    + 'mogu moze mozete zelim hocu cu ces ce cemo cete bih bi li sve svi svaki jedan jedna dva tri '
+    + 'godina dan dana sati sada danas sutra juce dobar dobro zdravo cao postovani postovana prijava '
+    + 'pozdrav srdacan hvala vam imam ima nema radi rade posao').split(' ');
+
+  function guessLang(text) {
+    var forced = dirSel.value;
+    if (forced === 'sr-de') return 'sr';
+    if (forced === 'de-sr') return 'de';
+
+    if (/[Ѐ-ӿ]/.test(text)) return 'sr';      // ćirilica
+    var de = 0, sr = 0;
+    if (/[äöüßÄÖÜ]/.test(text)) de += 3;
+    if (/[čćžšđČĆŽŠĐ]/.test(text)) sr += 3;
+
+    var words = (text.toLowerCase().match(/[a-zà-ÿčćžšđ]+/g) || []);
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      if (DE_WORDS.indexOf(w) !== -1) de++;
+      if (SR_WORDS.indexOf(w) !== -1) sr++;
+    }
+    // Neodlučeno ili prazno → srpski, jer je to glavni smer korišćenja.
+    return de > sr ? 'de' : 'sr';
+  }
+
+  // Servis vraća srpski u ćirilici; korisnik piše latinicom.
+  var CYR = {
+    'А':'A','Б':'B','В':'V','Г':'G','Д':'D','Ђ':'Đ','Е':'E','Ж':'Ž','З':'Z','И':'I','Ј':'J','К':'K',
+    'Л':'L','Љ':'Lj','М':'M','Н':'N','Њ':'Nj','О':'O','П':'P','Р':'R','С':'S','Т':'T','Ћ':'Ć','У':'U',
+    'Ф':'F','Х':'H','Ц':'C','Ч':'Č','Џ':'Dž','Ш':'Š',
+    'а':'a','б':'b','в':'v','г':'g','д':'d','ђ':'đ','е':'e','ж':'ž','з':'z','и':'i','ј':'j','к':'k',
+    'л':'l','љ':'lj','м':'m','н':'n','њ':'nj','о':'o','п':'p','р':'r','с':'s','т':'t','ћ':'ć','у':'u',
+    'ф':'f','х':'h','ц':'c','ч':'č','џ':'dž','ш':'š'
+  };
+
+  function toLatin(text) {
+    if (!/[Ѐ-ӿ]/.test(text)) return text;
+    var out = '';
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      var rep = CYR[ch];
+      if (rep === undefined) { out += ch; continue; }
+      // LJ/NJ/DŽ ispred velikog slova pišu se LJ/NJ/DŽ, inače Lj/Nj/Dž.
+      if (rep.length === 2 && rep[0] === rep[0].toUpperCase()) {
+        var next = text[i + 1];
+        if (next && CYR[next] && CYR[next] === CYR[next].toUpperCase() && /[А-ШЂЉЊЋЏ]/.test(next)) {
+          rep = rep.toUpperCase();
+        }
+      }
+      out += rep;
+    }
+    return out;
+  }
+
+  // ---------- Sie / du: prebacivanje registra u nemačkom ----------
+
+  // Nepravilni glagoli: Sie-oblik (= infinitiv) -> du-oblik.
+  var DU_IRREG = {
+    'sind':'bist','sein':'bist','haben':'hast','werden':'wirst','tun':'tust','wissen':'weißt',
+    'können':'kannst','müssen':'musst','wollen':'willst','sollen':'sollst','dürfen':'darfst',
+    'mögen':'magst','möchten':'möchtest',
+    'fahren':'fährst','laufen':'läufst','schlafen':'schläfst','tragen':'trägst','halten':'hältst',
+    'fallen':'fällst','lassen':'lässt','fangen':'fängst','schlagen':'schlägst','graben':'gräbst',
+    'braten':'brätst','raten':'rätst','waschen':'wäschst','wachsen':'wächst','stoßen':'stößt',
+    'essen':'isst','vergessen':'vergisst','messen':'misst','geben':'gibst','nehmen':'nimmst',
+    'sehen':'siehst','lesen':'liest','sprechen':'sprichst','helfen':'hilfst','treffen':'triffst',
+    'werfen':'wirfst','brechen':'brichst','empfehlen':'empfiehlst','stehlen':'stiehlst',
+    'treten':'trittst','gelten':'giltst','sterben':'stirbst'
+  };
+
+  // Imperativ tamo gde se ne dobija prostim skraćivanjem infinitiva.
+  var DU_IMP = {
+    'sind':'sei','sein':'sei','haben':'hab','werden':'werde','wissen':'wisse','tun':'tu',
+    'geben':'gib','nehmen':'nimm','sehen':'sieh','lesen':'lies','essen':'iss','vergessen':'vergiss',
+    'messen':'miss','sprechen':'sprich','helfen':'hilf','treffen':'triff','werfen':'wirf',
+    'brechen':'brich','empfehlen':'empfiehl','stehlen':'stiehl','treten':'tritt','gelten':'gilt',
+    'sterben':'stirb'
+  };
+
+  var DU_KEYS = Object.keys(DU_IRREG).sort(function (a, b) { return b.length - a.length; });
+
+  var SIE_IRREG = {};                       // obrnuto: du-oblik -> Sie-oblik
+  for (var _k in DU_IRREG) {
+    if (DU_IRREG.hasOwnProperty(_k) && _k !== 'sein') SIE_IRREG[DU_IRREG[_k]] = _k;
+  }
+  var SIE_KEYS = Object.keys(SIE_IRREG).sort(function (a, b) { return b.length - a.length; });
+
+  var MODALS = /^(haben|sind|sein|können|müssen|wollen|sollen|dürfen|mögen|möchten|werden|wissen)$/;
+  var WORD = 'A-Za-zÄÖÜäöüß';
+
+  function keepCase(src, out) {
+    if (src && src.charAt(0) !== src.charAt(0).toLowerCase()) {
+      return out.charAt(0).toUpperCase() + out.slice(1);
+    }
+    return out;
+  }
+
+  function stemOf(inf) {
+    if (/(eln|ern)$/.test(inf)) return inf.slice(0, -1);
+    if (/en$/.test(inf)) return inf.slice(0, -2);
+    if (/n$/.test(inf)) return inf.slice(0, -1);
+    return inf;
+  }
+
+  function suffixHit(word, keys) {
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      if (word === k || (word.length > k.length && word.slice(-k.length) === k)) return k;
+    }
+    return null;
+  }
+
+  function duForm(word) {
+    var w = word.toLowerCase();
+    var k = suffixHit(w, DU_KEYS);
+    if (k) return keepCase(word, w.slice(0, w.length - k.length) + DU_IRREG[k]);
+    var st = stemOf(w), out;
+    if (/[sßxz]$/.test(st)) out = st + 't';
+    else if (/(d|t|chn|ffn|gn|tm|dm)$/.test(st)) out = st + 'est';
+    else out = st + 'st';
+    return keepCase(word, out);
+  }
+
+  function impForm(word) {
+    var w = word.toLowerCase();
+    var k = suffixHit(w, DU_KEYS);
+    if (k && DU_IMP[k]) return keepCase(word, w.slice(0, w.length - k.length) + DU_IMP[k]);
+    var st = stemOf(w);
+    if (/(d|t|chn|ffn|gn|tm|dm)$/.test(st)) st += 'e';
+    return keepCase(word, st);
+  }
+
+  function sieForm(word) {
+    var w = word.toLowerCase();
+    var k = suffixHit(w, SIE_KEYS);
+    if (k) return keepCase(word, w.slice(0, w.length - k.length) + SIE_IRREG[k]);
+    var st;
+    if (/est$/.test(w)) st = w.slice(0, -3);
+    else if (/st$/.test(w)) st = w.slice(0, -2);
+    else if (/t$/.test(w)) st = w.slice(0, -1);
+    else st = w;
+    return keepCase(word, /(el|er)$/.test(st) ? st + 'n' : st + 'en');
+  }
+
+  // Glagol u Sie-obliku uvek se završava na -en/-n (izuzetak: "sind").
+  function isSieVerb(w) {
+    var l = w.toLowerCase();
+    return l === 'sind' || (l.length > 2 && /(en|eln|ern|n)$/.test(l));
+  }
+  // Glagol u du-obliku završava se na -st/-t.
+  function isDuVerb(w) {
+    var l = w.toLowerCase();
+    return l.length > 2 && /(st|t)$/.test(l);
+  }
+
+  // Za prepoznavanje zapovesti u smeru du -> Sie ("Ruf mich an" -> "Rufen Sie mich an").
+  var COMMON_VERBS = ('machen sagen fragen kommen gehen schicken senden schreiben rufen warten '
+    + 'bringen zeigen holen kaufen bezahlen buchen melden prüfen öffnen schließen beginnen denken '
+    + 'glauben hören reden erzählen erklären suchen finden stellen setzen legen bleiben arbeiten '
+    + 'lernen üben versuchen probieren bestellen reservieren antworten schauen füllen unterschreiben '
+    + 'verschieben wählen drücken klicken lesen achten denken merken behalten').split(' ');
+
+  var IMP_TO_SIE = {};
+  (function () {
+    var all = COMMON_VERBS.concat(Object.keys(DU_IRREG));
+    for (var i = 0; i < all.length; i++) {
+      var inf = all[i];
+      if (inf === 'bitten') continue;                       // "Bitte" je učtiva rečca, ne zapovest
+      var sieWord = (inf === 'sind' || inf === 'sein') ? 'seien' : inf;
+      IMP_TO_SIE[impForm(inf).toLowerCase()] = sieWord;
+    }
+  })();
+
+  // Ako iza reči stoji ovo, nije zapovest nego imenica ("Frage ist wichtig").
+  var NOT_IMP_NEXT = /^(ist|sind|war|waren|wird|wurde|hat|haben|kann|muss|soll|will|und|oder)$/;
+
+  // Pozdravi i završne formule — tu se ton najviše oseti.
+  var PHRASES_DU = [
+    [/Sehr geehrte Damen und Herren/g, 'Hallo'],
+    [/Sehr geehrte(?:r)? (?:Herr|Frau)\b/g, 'Hallo'],
+    [/Mit freundlichen Grüßen/g, 'Viele Grüße'],
+    [/Mit besten Grüßen/g, 'Viele Grüße'],
+    [/Freundliche Grüße/g, 'Viele Grüße'],
+    [/Hochachtungsvoll/g, 'Viele Grüße'],
+    [/Auf Wiedersehen/g, 'Tschüss']
+  ];
+
+  var PHRASES_SIE = [
+    [/\b(?:Liebe|Viele|Beste|Herzliche) Grüße/g, 'Mit freundlichen Grüßen'],
+    [/\bLG\b/g, 'Mit freundlichen Grüßen'],
+    [/(^|\n)[ \t]*(?:Hallo|Hi|Hey)\b/g, '$1Sehr geehrte Damen und Herren'],
+    [/\bTschüss\b/g, 'Auf Wiedersehen']
+  ];
+
+  function eachSentence(text, fn) {
+    var parts = text.split(/([.!?]+["»)]?\s*)/);
+    for (var i = 0; i < parts.length; i += 2) {
+      var s = parts[i];
+      if (!s) continue;
+      var wasUpper = /^\s*[A-ZÄÖÜ]/.test(s);
+      s = fn(s, /\?/.test(parts[i + 1] || ''));
+      if (wasUpper) s = s.replace(/^(\s*)([a-zäöü])/, function (a, sp, c) { return sp + c.toUpperCase(); });
+      parts[i] = s;
+    }
+    return parts.join('');
+  }
+
+  function toDu(text) {
+    var out = text;
+    for (var i = 0; i < PHRASES_DU.length; i++) out = out.replace(PHRASES_DU[i][0], PHRASES_DU[i][1]);
+
+    return eachSentence(out, function (s, isQuestion) {
+      // Zamenice se menjaju unutar rečenice da bi se veliko početno slovo vratilo.
+      s = s.replace(/\bIhnen\b/g, 'dir')
+           .replace(/\bIhrem\b/g, 'deinem').replace(/\bIhren\b/g, 'deinen')
+           .replace(/\bIhrer\b/g, 'deiner').replace(/\bIhres\b/g, 'deines')
+           .replace(/\bIhre\b/g, 'deine').replace(/\bIhr\b/g, 'dein');
+
+      if (s.indexOf('Sie') === -1) return s;
+
+      // Zapovest: rečenica počinje glagolom + Sie i nije pitanje ("Rufen Sie mich an." -> "Ruf mich an.")
+      var m = s.match(new RegExp('^(\\s*(?:Bitte\\s+)?)([' + WORD + ']+)\\s+Sie\\b'));
+      if (m && !isQuestion && !MODALS.test(m[2].toLowerCase()) && isSieVerb(m[2])) {
+        s = m[1] + impForm(m[2]) + s.slice(m[0].length);
+      }
+
+      // Inverzija/pitanje: "Haben Sie" -> "Hast du"
+      s = s.replace(new RegExp('([' + WORD + ']+)(\\s+)Sie\\b', 'g'), function (all, v, sp) {
+        return isSieVerb(v) ? duForm(v) + sp + 'du' : all;
+      });
+
+      // Izjava: "Sie haben" -> "du hast"
+      s = s.replace(new RegExp('\\bSie(\\s+)([' + WORD + ']+)', 'g'), function (all, sp, v) {
+        return isSieVerb(v) ? 'du' + sp + duForm(v) : all;
+      });
+
+      // Preostalo "Sie" je objekat
+      return s.replace(/\bSie\b/g, 'dich');
+    });
+  }
+
+  function toSie(text) {
+    var out = text;
+    for (var i = 0; i < PHRASES_SIE.length; i++) out = out.replace(PHRASES_SIE[i][0], PHRASES_SIE[i][1]);
+
+    return eachSentence(out, function (s) {
+      // Zapovest: "Ruf mich an." -> "Rufen Sie mich an."
+      var mi = s.match(new RegExp('^(\\s*(?:Bitte\\s+)?)([' + WORD + ']+)(\\s+|[.!?,;:]|$)'));
+      if (mi) {
+        var lead = mi[2].toLowerCase();
+        var rest = s.slice(mi[0].length);
+        var nextWord = ((rest.match(new RegExp('^([' + WORD + ']+)')) || [])[1] || '').toLowerCase();
+        if (IMP_TO_SIE[lead] && !NOT_IMP_NEXT.test(nextWord)) {
+          s = mi[1] + keepCase(mi[2], IMP_TO_SIE[lead]) + ' Sie' + mi[3] + rest;
+        }
+      }
+
+      // "Kannst du" -> "Können Sie"
+      s = s.replace(new RegExp('([' + WORD + ']+)(\\s+)\\bdu\\b', 'gi'), function (all, v, sp) {
+        return isDuVerb(v) ? sieForm(v) + sp + 'Sie' : all;
+      });
+      // "du hast" -> "Sie haben"
+      s = s.replace(new RegExp('\\bdu(\\s+)([' + WORD + ']+)', 'gi'), function (all, sp, v) {
+        return isDuVerb(v) ? 'Sie' + sp + sieForm(v) : all;
+      });
+
+      return s.replace(/\bdu\b/gi, 'Sie').replace(/\bdir\b/gi, 'Ihnen').replace(/\bdich\b/gi, 'Sie')
+              .replace(/\bdeinem\b/gi, 'Ihrem').replace(/\bdeinen\b/gi, 'Ihren')
+              .replace(/\bdeiner\b/gi, 'Ihrer').replace(/\bdeines\b/gi, 'Ihres')
+              .replace(/\bdeine\b/gi, 'Ihre').replace(/\bdein\b/gi, 'Ihr');
+    });
+  }
+
+  // Seče tekst na delove ispod `limit` znakova, po pasusima pa po rečenicama.
+  function splitText(text, limit) {
+    if (text.length <= limit) return [text];
+    var parts = [];
+    var rest = text;
+    while (rest.length > limit) {
+      var slice = rest.slice(0, limit);
+      var cut = -1;
+      var marks = ['\n\n', '\n', '. ', '! ', '? ', '; ', ', ', ' '];
+      for (var i = 0; i < marks.length && cut < 0; i++) {
+        var p = slice.lastIndexOf(marks[i]);
+        if (p > limit * 0.4) cut = p + marks[i].length;
+      }
+      if (cut < 0) cut = limit;
+      parts.push(rest.slice(0, cut));
+      rest = rest.slice(cut);
+    }
+    if (rest) parts.push(rest);
+    return parts;
+  }
+
+  function describeError(err) {
+    if (!navigator.onLine) return 'Nema internet konekcije.';
+    var m = String(err && err.message || err);
+    if (/HTTP 4\d\d/.test(m)) return 'Servis je odbio zahtev (' + m + '). Probaj ponovo za koji minut ili skrati tekst.';
+    if (/HTTP 5\d\d/.test(m)) return 'Servis trenutno ne radi (' + m + '). Pokušaj ponovo kasnije.';
+    if (/Failed to fetch|NetworkError|load failed/i.test(m)) return 'Servis nije dostupan (proveri vezu).';
+    return m;
+  }
+
+  // ---------- prevodilački servisi ----------
+
+  function googleTranslate(text, from, to) {
+    var url = 'https://translate.googleapis.com/translate_a/single?client=gtx'
+      + '&sl=' + from + '&tl=' + to + '&dt=t&q=' + encodeURIComponent(text);
+    return fetch(url).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function (data) {
+      var out = (data[0] || []).map(function (seg) { return seg[0]; }).join('');
+      return { text: out };
+    });
+  }
+
+  // Rezervni servis. Anonimno prima ~500 znakova po zahtevu.
+  function myMemoryTranslate(text, from, to) {
+    var pieces = splitText(text, 450);
+    var out = '';
+    return pieces.reduce(function (chain, piece) {
+      return chain.then(function () {
+        var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(piece)
+          + '&langpair=' + from + '|' + to;
+        return fetch(url).then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        }).then(function (data) {
+          var t = data && data.responseData && data.responseData.translatedText;
+          if (!t) throw new Error('prazan odgovor rezervnog servisa');
+          out += t;
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      return { text: out };
+    });
+  }
+
+  function translateChunk(text, from, to) {
+    return googleTranslate(text, from, to).catch(function () {
+      return myMemoryTranslate(text, from, to);
+    });
+  }
+
+  // Prevodi ceo tekst u zadatom smeru. Deo koji ne uspe ostaje u originalu
+  // umesto da ceo prevod propadne.
+  function runDirection(text, from, to, id) {
+    setDirection(from, to);
+
+    var chunks = splitText(text, 3000);
+    var results = new Array(chunks.length);
+    var failed = 0;
+
+    return chunks.reduce(function (chain, chunk, i) {
+      return chain.then(function () {
+        if (id !== reqId) return;
+        if (chunks.length > 1) setLoading('Prevodim… deo ' + (i + 1) + ' od ' + chunks.length);
+        return translateChunk(chunk, from, to).then(function (r) {
+          results[i] = r.text;
+        }).catch(function () {
+          failed++;
+          results[i] = chunk;
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      var joined = results.join('');
+      return {
+        text: to === 'sr' ? toLatin(joined) : joined,
+        failed: failed,
+        parts: chunks.length
+      };
+    });
+  }
+
+  function translateText(text, id) {
+    // Smer se određuje lokalno i uvek se šalje izričito — nikad "auto".
+    var from = guessLang(text);
+    var to = from === 'de' ? 'sr' : 'de';
+
+    return runDirection(text, from, to, id).then(function (res) {
+      if (res.failed && res.failed === res.parts) {
+        throw new Error('Servis nije odgovorio ni na jedan deo teksta.');
+      }
+      // Ako se ništa nije promenilo, verovatno je smer pogrešno pogođen —
+      // probaj suprotan (samo kad smer nije ručno zadat).
+      if (dirSel.value === 'auto' && !res.failed && res.text.trim() === text.trim()) {
+        return runDirection(text, to, from, id).then(function (res2) {
+          if (!res2.failed && res2.text.trim() !== text.trim()) return res2;
+          setDirection(from, to);
+          return res;
+        });
+      }
+      return res;
+    });
+  }
+
+  // ---------- glavna logika ----------
+
+  function translate(force) {
+    var text = input.value.trim();
+    if (!text) { lastKey = ''; rawOut = ''; setOutput(''); setStatus(''); return; }
+
+    var cacheKey = dirSel.value + '|' + text;
+    if (!force && cacheKey === lastKey) return;
+    lastKey = cacheKey;
+
+    var id = ++reqId;
+    setLoading();
+
+    translateText(text, id).then(function (res) {
+      if (id !== reqId) return;
+      rawOut = res.text;
+      var changed = renderOutput();
+      var note = 'Prevedeno — ' + NAMES[source].toLowerCase() + ' → ' + NAMES[target].toLowerCase() + '.';
+      if (target === 'de' && register && changed) {
+        note += ' Preinačeno u ' + (register === 'sie' ? 'Sie' : 'du') + '-oblik.';
+      }
+      if (res.failed) {
+        setStatus('Delimično prevedeno — ' + res.failed + ' od ' + res.parts
+          + ' delova nije uspelo i ostavljeno je u originalu. Probaj ponovo.', 'warn');
+      } else {
+        setStatus(note);
+      }
+      save();
+    }).catch(function (err) {
+      if (id !== reqId) return;
+      lastKey = '';
+      setStatus(describeError(err), 'err');
+    });
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(function () { translate(false); }, 500);
+  }
+
+  // ---------- čuvanje ----------
+
+  function save() {
+    try {
+      localStorage.setItem(STORE, JSON.stringify({
+        text: input.value,
+        dir: dirSel.value,
+        reg: register
+      }));
+    } catch (e) { /* privatni režim — preskoči */ }
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      if (!raw) return;
+      var s = JSON.parse(raw);
+      if (s.text) input.value = s.text;
+      if (s.dir) dirSel.value = s.dir;
+      if (s.reg === 'sie' || s.reg === 'du') register = s.reg;
+    } catch (e) { /* ignoriši neispravan zapis */ }
+  }
+
+  // ---------- događaji ----------
+
+  input.addEventListener('input', function () {
+    count.textContent = input.value.length;
+    if (!input.value.trim()) { rawOut = ''; setOutput(''); setStatus(''); lastKey = ''; }
+    save();
+    schedule();
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      clearTimeout(timer);
+      translate(true);
+    }
+  });
+
+  dirSel.addEventListener('change', function () {
+    save(); lastKey = '';
+    if (input.value.trim()) translate(true);
+  });
+
+  copyBtn.addEventListener('click', function () {
+    var text = outputText();
+    if (!text) return;
+    var done = function () {
+      copyBtn.textContent = '✓ Kopirano';
+      copyBtn.classList.add('copied');
+      copyBtn.classList.remove('primary');
+      setTimeout(function () {
+        copyBtn.textContent = 'Kopiraj prevod';
+        copyBtn.classList.remove('copied');
+        copyBtn.classList.add('primary');
+      }, 1400);
+    };
+    function fallbackCopy() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      try { document.execCommand('copy'); } catch (e) { /* ništa */ }
+      document.body.removeChild(ta);
+      done();
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  });
+
+  speakBtn.addEventListener('click', function () {
+    var text = outputText();
+    if (!text || !('speechSynthesis' in window)) return;
+    if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; }
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = LOCALE[target] || 'de-DE';
+    u.rate = 0.95;
+    speechSynthesis.speak(u);
+  });
+
+  sieBtn.addEventListener('click', function () { setRegister('sie'); });
+  duBtn.addEventListener('click', function () { setRegister('du'); });
+
+  clearBtn.addEventListener('click', function () {
+    input.value = '';
+    count.textContent = '0';
+    lastKey = '';
+    rawOut = '';
+    setOutput('');
+    setStatus('');
+    save();
+  });
+
+  swapBtn.addEventListener('click', function () {
+    var prev = outputText();
+    if (!prev) return;
+    input.value = prev;
+    count.textContent = prev.length;
+    lastKey = '';
+    rawOut = '';
+    setOutput('');
+    setStatus('');
+    save();
+    translate(true);
+  });
+
+  // ---------- start ----------
+
+  load();
+  setDirection(dirSel.value === 'de-sr' ? 'de' : 'sr', dirSel.value === 'de-sr' ? 'sr' : 'de');
+  renderOutput();
+  count.textContent = input.value.length;
+  if (!('speechSynthesis' in window)) speakBtn.classList.add('hidden');
+  // Na telefonu ne otvaramo tastaturu automatski.
+  if (window.innerWidth > 760) input.focus();
+  if (input.value.trim()) translate(true);
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function () { /* radi i bez toga */ });
+    });
+  }
+})();
+</script>
+</body>
+</html>

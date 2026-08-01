@@ -1,0 +1,7 @@
+# radni prostor subagent-driven-development skila
+.superpowers/
+
+# lokalna podešavanja Claude Code-a
+.claude/settings.local.json
+
+node_modules/
