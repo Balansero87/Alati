@@ -168,6 +168,9 @@
   button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
   /* maketa nema opšte pravilo za onemogućeno dugme (samo inline primer za red sa greškom) — dodato ovde da dugme deluje sivo dok je disabled */
   button:disabled { opacity: .45; cursor: default; }
+
+  .drop.preko { border-color: var(--accent); background: var(--panel); }
+  .thumb.sivo { display:flex; align-items:center; justify-content:center; font-size:16px; }
 </style>
 </head>
 <body>
@@ -237,11 +240,132 @@
     return { w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)) };
   }
 
+  // Ljudski čitljiva veličina fajla.
+  function kb(b) {
+    if (b === null || b === undefined) return '—';
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+    return (b / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
   // ---- slike ----
+
+  // Dekodiraj fajl u nešto što canvas ume da nacrta.
+  // Moderni put je createImageBitmap; stariji browseri idu preko <img>.
+  function ucitajSliku(file, cb) {
+    if (!/^image\//.test(file.type)) { cb('Nije podržana slika', null); return; }
+    var alfa = /png|webp|gif/i.test(file.type);
+
+    function gotovo(src, w, h) {
+      cb(null, { src: src, w: w, h: h, alfa: alfa, ime: file.name, bajta: file.size });
+    }
+
+    if (window.createImageBitmap) {
+      createImageBitmap(file).then(function (bm) {
+        gotovo(bm, bm.width, bm.height);
+      }, function () { preko_img(); });
+    } else {
+      preko_img();
+    }
+
+    function preko_img() {
+      var url = URL.createObjectURL(file);
+      var im = new Image();
+      im.onload = function () {
+        URL.revokeObjectURL(url);
+        if (!im.naturalWidth) { cb('Nije podržana slika', null); return; }
+        gotovo(im, im.naturalWidth, im.naturalHeight);
+      };
+      im.onerror = function () {
+        URL.revokeObjectURL(url);
+        cb('Nije podržana slika', null);
+      };
+      im.src = url;
+    }
+  }
 
   // ---- obrada ----
 
   // ---- UI ----
+
+  // Pomoćna: element po id-ju (nedostajala je iz Zadatka 1, dodata ovde jer je neophodna).
+  function $(id) { return document.getElementById(id); }
+
+  var stavke = [];
+  // Sledeći indeks čiji red treba iscrtati — čuva redosled ulaza i kad
+  // dekodovanje kasnijeg fajla završi pre ranijeg (asinhrono, redosled nije zagarantovan).
+  var sledeciZaCrtanje = 0;
+
+  function dodajFajlove(lista) {
+    var baza = stavke.length;
+    var n = lista.length;
+    var i;
+    // rezerviši mesto u nizu po indeksu ulaznog fajla pre dekodovanja
+    for (i = 0; i < n; i++) stavke.push(null);
+    $('brojInfo').textContent = stavke.length + ' fajlova';
+
+    for (i = 0; i < n; i++) (function (f, idx) {
+      ucitajSliku(f, function (greska, p) {
+        var s = greska
+          ? { ime: f.name, bajta: f.size, greska: greska }
+          : p;
+        stavke[idx] = s;
+        $('brojInfo').textContent = stavke.length + ' fajlova';
+        // iscrtaj sve redove koji su sad na redu, po originalnom redosledu
+        while (sledeciZaCrtanje < stavke.length && stavke[sledeciZaCrtanje]) {
+          renderRed(stavke[sledeciZaCrtanje]);
+          sledeciZaCrtanje++;
+        }
+      });
+    })(lista[i], baza + i);
+  }
+
+  $('drop').onclick = function () { $('fajlovi').click(); };
+  $('fajlovi').onchange = function () { dodajFajlove(this.files); this.value = ''; };
+
+  ['dragenter', 'dragover'].forEach(function (e) {
+    document.addEventListener(e, function (ev) {
+      ev.preventDefault();
+      $('drop').classList.add('preko');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (e) {
+    document.addEventListener(e, function (ev) {
+      ev.preventDefault();
+      if (e === 'dragleave' && ev.relatedTarget) return;
+      $('drop').classList.remove('preko');
+      if (e === 'drop' && ev.dataTransfer && ev.dataTransfer.files.length) {
+        dodajFajlove(ev.dataTransfer.files);
+      }
+    });
+  });
+
+  // Upiši red u tabelu. Kolone „Novo" i „Ušteda" popunjava Zadatak 5.
+  function renderRed(s) {
+    var tr = document.createElement('tr');
+    s.tr = tr;
+    if (s.greska) {
+      tr.innerHTML =
+        '<td><div class="thumb sivo">⚠</div></td>' +
+        '<td class="fname bad"></td>' +
+        '<td class="num">—</td>' +
+        '<td class="bad" colspan="2"></td>' +
+        '<td style="text-align:right"><button disabled>Preuzmi</button></td>';
+      tr.querySelector('.fname').textContent = s.ime;
+      tr.querySelector('.bad[colspan]').textContent = s.greska;
+    } else {
+      tr.innerHTML =
+        '<td></td>' +
+        '<td class="fname"></td>' +
+        '<td class="num"></td>' +
+        '<td class="num" data-novo>…</td>' +
+        '<td class="save" data-ust>…</td>' +
+        '<td style="text-align:right"><button data-dl disabled>Preuzmi</button></td>';
+      tr.querySelector('.fname').textContent = s.ime;
+      tr.querySelector('.num').textContent = s.w + '×' + s.h + ' · ' + kb(s.bajta);
+    }
+    $('redovi').appendChild(tr);
+  }
 
   // ---- samoprovera: pokreće se samo kad adresa ima #test ----
   function samoprovera() {
@@ -310,6 +434,11 @@
     proveri('nula i negativno se tretiraju kao prazno',
       d(1500, 1000, { jedinica: 'pixels', w: 0, h: -5, dpi: 96, neUvecavaj: false }),
       { w: 1500, h: 1000 });
+
+    proveri('kb: bajtovi', kb(512), '512 B');
+    proveri('kb: kilobajti', kb(2048), '2 KB');
+    proveri('kb: megabajti', kb(3 * 1024 * 1024), '3.00 MB');
+    proveri('kb: nepoznato', kb(null), '—');
 
     // ---- ispis ----
     var pre = document.createElement('pre');
