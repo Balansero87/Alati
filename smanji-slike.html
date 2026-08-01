@@ -355,6 +355,117 @@
     return ime.replace(/\.[^.\\/]*$/, '') + '.' + nastavak(mime);
   }
 
+  // Ručni UTF-8 enkoder — TextEncoder ne postoji na starijim mobilnim browserima.
+  function uUtf8(s) {
+    var izlaz = [], i, c, c2, cp;
+    for (i = 0; i < s.length; i++) {
+      c = s.charCodeAt(i);
+      if (c < 0x80) {
+        izlaz.push(c);
+      } else if (c < 0x800) {
+        izlaz.push(0xC0 | (c >> 6), 0x80 | (c & 63));
+      } else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
+        c2 = s.charCodeAt(i + 1);
+        cp = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00);
+        izlaz.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 63),
+                   0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+        i++;
+      } else {
+        izlaz.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      }
+    }
+    return new Uint8Array(izlaz);
+  }
+
+  // CRC-32 (IEEE), sa tabelom koja se pravi pri prvom pozivu.
+  function crc32(u8) {
+    var t = crc32.tabela, n, k, c, i;
+    if (!t) {
+      t = crc32.tabela = new Int32Array(256);
+      for (n = 0; n < 256; n++) {
+        c = n;
+        for (k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        t[n] = c;
+      }
+    }
+    var crc = -1;
+    for (i = 0; i < u8.length; i++) crc = (crc >>> 8) ^ t[(crc ^ u8[i]) & 0xFF];
+    return (crc ^ -1) >>> 0;
+  }
+
+  // ZIP bez kompresije (metoda 0). Slike su već kompresovane, pa deflate
+  // ne bi doneo ništa osim mnogo koda.
+  function napraviZip(unosi) {
+    var lokalni = [], centralni = [], offset = 0, i;
+    var sada = new Date();
+    var vreme = ((sada.getHours() << 11) | (sada.getMinutes() << 5) |
+                 (sada.getSeconds() >> 1)) & 0xFFFF;
+    var datum = (((sada.getFullYear() - 1980) << 9) | ((sada.getMonth() + 1) << 5) |
+                 sada.getDate()) & 0xFFFF;
+
+    for (i = 0; i < unosi.length; i++) {
+      var ime = uUtf8(unosi[i].ime);
+      var pod = unosi[i].bajtovi;
+      var crc = crc32(pod);
+
+      var lh = new Uint8Array(30 + ime.length);
+      var lv = new DataView(lh.buffer);
+      lv.setUint32(0, 0x04034b50, true);   // potpis
+      lv.setUint16(4, 20, true);           // potrebna verzija
+      lv.setUint16(6, 0x0800, true);       // bit 11: ime je UTF-8
+      lv.setUint16(8, 0, true);            // metoda 0 = store
+      lv.setUint16(10, vreme, true);
+      lv.setUint16(12, datum, true);
+      lv.setUint32(14, crc, true);
+      lv.setUint32(18, pod.length, true);  // kompresovana veličina
+      lv.setUint32(22, pod.length, true);  // stvarna veličina
+      lv.setUint16(26, ime.length, true);
+      lv.setUint16(28, 0, true);           // bez extra polja
+      lh.set(ime, 30);
+      lokalni.push(lh, pod);
+
+      var ch = new Uint8Array(46 + ime.length);
+      var cv = new DataView(ch.buffer);
+      cv.setUint32(0, 0x02014b50, true);
+      cv.setUint16(4, 20, true);           // verzija kojom je napravljen
+      cv.setUint16(6, 20, true);           // potrebna verzija
+      cv.setUint16(8, 0x0800, true);
+      cv.setUint16(10, 0, true);
+      cv.setUint16(12, vreme, true);
+      cv.setUint16(14, datum, true);
+      cv.setUint32(16, crc, true);
+      cv.setUint32(20, pod.length, true);
+      cv.setUint32(24, pod.length, true);
+      cv.setUint16(28, ime.length, true);
+      cv.setUint16(30, 0, true);           // extra
+      cv.setUint16(32, 0, true);           // komentar
+      cv.setUint16(34, 0, true);           // broj diska
+      cv.setUint16(36, 0, true);           // interni atributi
+      cv.setUint32(38, 0, true);           // eksterni atributi
+      cv.setUint32(42, offset, true);      // pomeraj lokalnog headera
+      ch.set(ime, 46);
+      centralni.push(ch);
+
+      offset += lh.length + pod.length;
+    }
+
+    var cdVel = 0;
+    for (i = 0; i < centralni.length; i++) cdVel += centralni[i].length;
+
+    var eocd = new Uint8Array(22);
+    var ev = new DataView(eocd.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(4, 0, true);              // broj ovog diska
+    ev.setUint16(6, 0, true);              // disk sa početkom centralnog direktorijuma
+    ev.setUint16(8, unosi.length, true);
+    ev.setUint16(10, unosi.length, true);
+    ev.setUint32(12, cdVel, true);
+    ev.setUint32(16, offset, true);
+    ev.setUint16(20, 0, true);             // bez komentara
+
+    return new Blob(lokalni.concat(centralni, [eocd]), { type: 'application/zip' });
+  }
+
   // ---- slike ----
 
   // Dekodiraj fajl u nešto što canvas ume da nacrta.
@@ -675,6 +786,22 @@
     izl = nacrtaj(uz, 200, 200, { rezim: 'fit', boja: '#00ff00', providno: true, alfaMoguca: false });
     proveri('providno se ignoriše kad format ne ume alfa', piksel(izl, 10, 10), [0, 255, 0, 255]);
 
+    proveri('uUtf8: ASCII', Array.prototype.slice.call(uUtf8('AB')), [65, 66]);
+    proveri('uUtf8: ćirilica', Array.prototype.slice.call(uUtf8('Ж')), [0xD0, 0x96]);
+    proveri('uUtf8: š', Array.prototype.slice.call(uUtf8('š')), [0xC5, 0xA1]);
+    proveri('uUtf8: emodži izvan BMP',
+      Array.prototype.slice.call(uUtf8('😀')), [0xF0, 0x9F, 0x98, 0x80]);
+
+    // standardni kontrolni vektor za CRC-32
+    proveri('crc32 kontrolni vektor', crc32(uUtf8('123456789')), 0xCBF43926);
+    proveri('crc32 praznog niza', crc32(new Uint8Array(0)), 0);
+
+    var zip = napraviZip([{ ime: 'a.txt', bajtovi: uUtf8('zdravo') }]);
+    proveri('zip: tip bloba', zip.type, 'application/zip');
+    // 30 (lokalni header) + 5 (ime) + 6 (podaci) + 46 + 5 (centralni) + 22 (EOCD)
+    proveri('zip: tačna veličina', zip.size, 114);
+    proveri('zip: prazan ulaz daje samo EOCD', napraviZip([]).size, 22);
+
     // ---- ispis ----
     var pre = document.createElement('pre');
     pre.style.cssText = 'padding:20px;font:13px/1.7 ui-monospace,Consolas,monospace;white-space:pre-wrap';
@@ -746,9 +873,21 @@
         obradiStavku(s, function (greska) {
           if (greska) s.greska = greska;
           osveziRed(s);
+          // PRIVREMENO: omogući #zip čim bilo koja stavka ima blob.
+          // Zadatak 7 ovo premešta u pravi orkestrator.
+          osveziDugmeZip();
         });
       })(s);
     }
+  }
+
+  // PRIVREMENO: vidi komentar u obradiSveProsto.
+  function osveziDugmeZip() {
+    var ima = false, i;
+    for (i = 0; i < stavke.length; i++) {
+      if (stavke[i] && stavke[i].blob) { ima = true; break; }
+    }
+    $('zip').disabled = !ima;
   }
 
   function osveziRed(s) {
@@ -779,6 +918,45 @@
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
+
+  // Imena se ne smeju ponoviti unutar arhive.
+  function jedinstvenoIme(ime, zauzeta) {
+    if (!zauzeta[ime]) { zauzeta[ime] = true; return ime; }
+    var tacka = ime.lastIndexOf('.');
+    var osnova = tacka > 0 ? ime.slice(0, tacka) : ime;
+    var nast = tacka > 0 ? ime.slice(tacka) : '';
+    var n = 2;
+    while (zauzeta[osnova + '-' + n + nast]) n++;
+    var novo = osnova + '-' + n + nast;
+    zauzeta[novo] = true;
+    return novo;
+  }
+
+  $('zip').onclick = function () {
+    var dobre = [], i;
+    for (i = 0; i < stavke.length; i++) if (stavke[i] && stavke[i].blob) dobre.push(stavke[i]);
+    if (!dobre.length) return;
+
+    // imena se dodeljuju sinhrono, u petlji, pre nego što ijedan FileReader krene —
+    // tako sufiks „-2" prati redosled u listi umesto redosleda asinhronog čitanja.
+    var imena = [], zauzeta = {};
+    for (i = 0; i < dobre.length; i++) {
+      imena.push(jedinstvenoIme(preimenuj(dobre[i].ime, dobre[i].noviMime), zauzeta));
+    }
+
+    var unosi = [], ostalo = dobre.length;
+    dobre.forEach(function (s, idx) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        unosi[idx] = {
+          ime: imena[idx],
+          bajtovi: new Uint8Array(fr.result)
+        };
+        if (--ostalo === 0) preuzmi(napraviZip(unosi), 'smanjene-slike.zip');
+      };
+      fr.readAsArrayBuffer(s.blob);
+    });
+  };
 
   $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
   $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
