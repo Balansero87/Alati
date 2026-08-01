@@ -609,8 +609,7 @@
           renderRed(stavke[sledeciZaCrtanje]);
           sledeciZaCrtanje++;
         }
-        trenutniPregled();
-        obradiSveProsto();
+        osvezi();
       });
     })(lista[i], baza + i);
   }
@@ -645,7 +644,7 @@
         '<td class="fname bad"></td>' +
         '<td class="num">—</td>' +
         '<td class="bad" colspan="2"></td>' +
-        '<td style="text-align:right"><button disabled>Preuzmi</button></td>';
+        '<td style="text-align:right"><button disabled>Preuzmi</button> <button data-ukloni title="Ukloni">×</button></td>';
       tr.querySelector('.fname').textContent = s.ime;
       tr.querySelector('.bad[colspan]').textContent = s.greska;
     } else {
@@ -655,7 +654,7 @@
         '<td class="num"></td>' +
         '<td class="num" data-novo>…</td>' +
         '<td class="save" data-ust>…</td>' +
-        '<td style="text-align:right"><button data-dl disabled>Preuzmi</button></td>';
+        '<td style="text-align:right"><button data-dl disabled>Preuzmi</button> <button data-ukloni title="Ukloni">×</button></td>';
       tr.querySelector('.fname').textContent = s.ime;
       tr.querySelector('.num').textContent = s.w + '×' + s.h + ' · ' + kb(s.bajta);
       // sličica se crta iz izvorne slike, ne iz izlaznog canvasa — nezavisna od formata/quality-ja
@@ -664,6 +663,7 @@
       });
       tr.querySelector('.thumb').src = slic.toDataURL();
     }
+    tr.querySelector('[data-ukloni]').onclick = function () { ukloniStavku(s); osvezi(); };
     $('redovi').appendChild(tr);
   }
 
@@ -863,39 +863,101 @@
     }
   }
 
-  // PRIVREMENO: prost prolaz kroz sve stavke, bez progresa, redosleda i zbira.
-  // Zadatak 7 ovo zamenjuje pravim orkestratorom (obradiSve).
-  function obradiSveProsto() {
-    for (var i = 0; i < stavke.length; i++) {
-      var s = stavke[i];
-      if (!s || s.greska) continue;
-      (function (s) {
-        obradiStavku(s, function (greska) {
-          if (greska) s.greska = greska;
-          osveziRed(s);
-          // PRIVREMENO: omogući #zip čim bilo koja stavka ima blob.
-          // Zadatak 7 ovo premešta u pravi orkestrator.
-          osveziDugmeZip();
-        });
-      })(s);
+  var uToku = false, zahtev = 0;
+
+  // Obrada je sekvencijalna namerno — paralelno dekodovanje desetak slika
+  // obara memoriju na telefonu.
+  function obradiSve() {
+    var moj = ++zahtev;
+    if (uToku) return;                 // tekući prolaz će videti novi zahtev
+    uToku = true;
+
+    var i = 0, ukupnoOrig = 0, ukupnoNovo = 0;
+    $('prog').classList.remove('hidden');
+
+    function dalje() {
+      if (moj !== zahtev) {            // podešavanja su se promenila u međuvremenu
+        uToku = false;
+        obradiSve();
+        return;
+      }
+      if (i >= stavke.length) {
+        uToku = false;
+        $('prog').classList.add('hidden');
+        $('zbir').textContent = brojDobrih() + ' slika · ' + kb(ukupnoOrig) +
+          ' → ' + kb(ukupnoNovo) +
+          (ukupnoOrig ? '  (−' + Math.round((1 - ukupnoNovo / ukupnoOrig) * 100) + '%)' : '');
+        $('zip').disabled = brojDobrih() === 0;
+        return;
+      }
+
+      var s = stavke[i++];
+      // mesto još nije razrešeno (asinhrono dekodovanje fajla još traje) —
+      // preskoči za sada, novi osvezi() poziv će kad razrešenje stigne ionako
+      // restartovati prolaz (moj !== zahtev iznad)
+      if (!s) { setTimeout(dalje, 0); return; }
+
+      $('prog').firstChild.style.width = Math.round(i / stavke.length * 100) + '%';
+
+      if (s.greska) { osveziRed(s); dalje(); return; }
+
+      obradiStavku(s, function (greska) {
+        // stavka je mogla ranije uspešno da se obradi (drugi prolaz, izmenjena
+        // podešavanja) — ako sad padne, odbaci stari blob da brojDobrih/zbir/zip
+        // ne broje zastarelu (uspešnu) obradu kao još uvek važeću
+        if (greska) { s.greska = greska; s.blob = null; }
+        else { s.greska = null; ukupnoOrig += s.bajta; ukupnoNovo += s.blob.size; }
+        osveziRed(s);
+        // predah između slika: pušta browser da oslobodi memoriju i osveži UI
+        setTimeout(dalje, 0);
+      });
     }
+    dalje();
   }
 
-  // PRIVREMENO: vidi komentar u obradiSveProsto.
-  function osveziDugmeZip() {
-    var ima = false, i;
-    for (i = 0; i < stavke.length; i++) {
-      if (stavke[i] && stavke[i].blob) { ima = true; break; }
+  function brojDobrih() {
+    var n = 0, i;
+    for (i = 0; i < stavke.length; i++) if (stavke[i] && stavke[i].blob) n++;
+    return n;
+  }
+
+  var odloz = null;
+  function osvezi() {
+    trenutniPregled();                 // pregled je trenutan
+    clearTimeout(odloz);
+    odloz = setTimeout(obradiSve, 200); // batch čeka da korisnik pusti slajder
+  }
+
+  // Ukloni stavku iz liste i oslobodi njene resurse (ImageBitmap, red u tabeli).
+  function ukloniStavku(s) {
+    if (s.src && s.src.close) s.src.close();
+    if (s.tr && s.tr.parentNode) s.tr.parentNode.removeChild(s.tr);
+    var i = stavke.indexOf(s);
+    if (i >= 0) {
+      stavke.splice(i, 1);
+      // sledeciZaCrtanje je indeks u ovom istom nizu — pomeri ga unazad ako je
+      // uklonjena stavka bila ispred njega, inače kasnije dodati fajlovi
+      // nikad ne dobiju red (indeks bi ostao trajno prevelik)
+      if (i < sledeciZaCrtanje) sledeciZaCrtanje--;
     }
-    $('zip').disabled = !ima;
+    $('brojInfo').textContent = stavke.length + ' fajlova';
   }
 
   function osveziRed(s) {
     if (!s.tr) return;
     if (s.greska) {
-      s.tr.querySelector('[data-novo]').textContent = '—';
+      // red greške iz dekodovanja (renderRed) nema data-novo/data-ust —
+      // ta kolona je spojena u jedno .bad[colspan] polje popunjeno već pri
+      // crtanju; ovde se osvežava samo red koji je PRVO nacrtan kao uspešan
+      // pa je obradiStavku naknadno prijavio grešku (data-novo/data-ust postoje)
+      var novo = s.tr.querySelector('[data-novo]');
+      if (novo) novo.textContent = '—';
       var e = s.tr.querySelector('[data-ust]');
-      e.textContent = s.greska; e.className = 'bad';
+      if (e) { e.textContent = s.greska; e.className = 'bad'; }
+      // ako je red ranije bio uspešan (drugi prolaz sad pao), ugasi „Preuzmi"
+      // i skini staru onclick — ne sme da nudi preuzimanje zastarelog bloba
+      var dlErr = s.tr.querySelector('[data-dl]');
+      if (dlErr) { dlErr.disabled = true; dlErr.onclick = null; }
       return;
     }
     s.tr.querySelector('[data-novo]').textContent =
@@ -958,19 +1020,19 @@
     });
   };
 
-  $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
-  $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
-  $('jedinica').onchange = function () { state.jedinica = this.value; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
-  $('dpi').oninput = function () { state.dpi = Number(this.value) || 96; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
-  $('format').onchange = function () { state.format = this.value; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
-  $('quality').oninput = function () { state.quality = Number(this.value); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
-  $('boja').oninput = function () { state.boja = this.value; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
-  $('providno').onchange = function () { state.providno = this.checked; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
-  $('neUvecavaj').onchange = function () { state.neUvecavaj = this.checked; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+  $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); renderIzgled(); osvezi(); };
+  $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); renderIzgled(); osvezi(); };
+  $('jedinica').onchange = function () { state.jedinica = this.value; renderIzgled(); osvezi(); };
+  $('dpi').oninput = function () { state.dpi = Number(this.value) || 96; renderIzgled(); osvezi(); };
+  $('format').onchange = function () { state.format = this.value; renderIzgled(); osvezi(); };
+  $('quality').oninput = function () { state.quality = Number(this.value); renderIzgled(); osvezi(); };
+  $('boja').oninput = function () { state.boja = this.value; renderIzgled(); osvezi(); };
+  $('providno').onchange = function () { state.providno = this.checked; renderIzgled(); osvezi(); };
+  $('neUvecavaj').onchange = function () { state.neUvecavaj = this.checked; renderIzgled(); osvezi(); };
 
   var modeDugmad = document.querySelectorAll('.mode');
   for (var mi = 0; mi < modeDugmad.length; mi++) (function (b) {
-    b.onclick = function () { state.rezim = b.getAttribute('data-rezim'); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+    b.onclick = function () { state.rezim = b.getAttribute('data-rezim'); renderIzgled(); osvezi(); };
   })(modeDugmad[mi]);
 
   renderIzgled();
