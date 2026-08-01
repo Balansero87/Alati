@@ -587,7 +587,11 @@
   // Nacrtaj trenutni pregled na osnovu prve ispravne stavke i trenutnog state-a.
   function trenutniPregled() {
     var s = null, i;
-    for (i = 0; i < stavke.length; i++) if (!stavke[i].greska) { s = stavke[i]; break; }
+    for (i = 0; i < stavke.length; i++) {
+      if (!stavke[i] || stavke[i].greska) continue;   // mesto još nije razrešeno (asinhrono dekodovanje) ili je greška
+      s = stavke[i];
+      break;
+    }
     if (!s) { $('pregledInfo').textContent = ''; return; }
 
     var d = racunajDimenzije(s.w, s.h, state);
