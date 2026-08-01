@@ -196,7 +196,15 @@
   button:disabled { opacity: .45; cursor: default; }
 
   .drop.preko { border-color: var(--accent); background: var(--panel); }
+  .thumb {
+    width: 34px; height: 34px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+    border: 1px solid var(--border);
+  }
   .thumb.sivo { display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .mono { font-family: ui-monospace, Consolas, monospace; }
 </style>
 </head>
 <body>
@@ -229,6 +237,21 @@
       <button class="mode" data-rezim="stretch">Stretch</button>
       <button class="mode" data-rezim="crop">Crop</button>
       <button class="mode" data-rezim="fit">Fit</button>
+    </div>
+    <span class="sep"></span>
+    <div class="fld">
+      <span class="lbl">Format</span>
+      <select id="format">
+        <option value="original">Original</option>
+        <option value="jpg">JPG</option>
+        <option value="png">PNG</option>
+        <option value="webp">WEBP</option>
+      </select>
+    </div>
+    <div class="fld" id="kvalFld">
+      <span class="lbl">Quality</span>
+      <input type="range" id="quality" min="1" max="100">
+      <span class="lbl mono" id="qualityVal"></span>
     </div>
     <span class="sep"></span>
     <div class="fld">
@@ -314,6 +337,24 @@
     return (b / 1024 / 1024).toFixed(2) + ' MB';
   }
 
+  // Format koji je korisnik izabrao → MIME. „original" bira po tome da li ulaz nosi alfu.
+  function mimeZa(format, ulaznaAlfa) {
+    if (format === 'jpg') return 'image/jpeg';
+    if (format === 'png') return 'image/png';
+    if (format === 'webp') return 'image/webp';
+    return ulaznaAlfa ? 'image/png' : 'image/jpeg';
+  }
+
+  function alfaMoguca(mime) { return mime !== 'image/jpeg'; }
+
+  function nastavak(mime) {
+    return mime === 'image/jpeg' ? 'jpg' : mime === 'image/png' ? 'png' : 'webp';
+  }
+
+  function preimenuj(ime, mime) {
+    return ime.replace(/\.[^.\\/]*$/, '') + '.' + nastavak(mime);
+  }
+
   // ---- slike ----
 
   // Dekodiraj fajl u nešto što canvas ume da nacrta.
@@ -380,12 +421,57 @@
     return c;
   }
 
+  // toBlob je asinhron i ume da vrati null kad ostane bez memorije.
+  function uKodiraj(c, mime, quality, cb) {
+    try {
+      c.toBlob(function (b) {
+        if (!b) { cb('Neuspešno kodiranje', null); return; }
+        cb(null, b);
+      }, mime, quality / 100);
+    } catch (e) {
+      cb('Neuspešno kodiranje', null);
+    }
+  }
+
   // ---- obrada ----
+
+  // Obradi jednu stavku do gotovog bloba.
+  function obradiStavku(s, gotovo) {
+    var mime = mimeZa(state.format, s.alfa);
+    var d = racunajDimenzije(s.w, s.h, state);
+    var c;
+    try {
+      c = nacrtaj(s.src, d.w, d.h, {
+        rezim: state.rezim, boja: state.boja,
+        providno: state.providno, alfaMoguca: alfaMoguca(mime)
+      });
+    } catch (e) {
+      gotovo('Slika je prevelika za ovaj browser');
+      return;
+    }
+    uKodiraj(c, mime, state.quality, function (greska, blob) {
+      if (greska) { gotovo(greska); return; }
+      s.blob = blob; s.novaW = d.w; s.novaH = d.h; s.noviMime = mime;
+      gotovo(null);
+    });
+  }
 
   // ---- UI ----
 
   // Pomoćna: element po id-ju (nedostajala je iz Zadatka 1, dodata ovde jer je neophodna).
   function $(id) { return document.getElementById(id); }
+
+  // WEBP se nudi samo ako ga ovaj browser ume enkodovati
+  (function () {
+    var t = document.createElement('canvas');
+    t.width = t.height = 1;
+    if (t.toDataURL('image/webp').indexOf('data:image/webp') !== 0) {
+      var o = $('format').querySelector('option[value="webp"]');
+      if (o) o.parentNode.removeChild(o);
+      if (state.format === 'webp') state.format = 'jpg';
+      DEFAULTS.format = 'jpg';
+    }
+  })();
 
   var stavke = [];
   // Sledeći indeks čiji red treba iscrtati — čuva redosled ulaza i kad
@@ -413,6 +499,7 @@
           sledeciZaCrtanje++;
         }
         trenutniPregled();
+        obradiSveProsto();
       });
     })(lista[i], baza + i);
   }
@@ -452,7 +539,7 @@
       tr.querySelector('.bad[colspan]').textContent = s.greska;
     } else {
       tr.innerHTML =
-        '<td></td>' +
+        '<td><img class="thumb" alt=""></td>' +
         '<td class="fname"></td>' +
         '<td class="num"></td>' +
         '<td class="num" data-novo>…</td>' +
@@ -460,6 +547,11 @@
         '<td style="text-align:right"><button data-dl disabled>Preuzmi</button></td>';
       tr.querySelector('.fname').textContent = s.ime;
       tr.querySelector('.num').textContent = s.w + '×' + s.h + ' · ' + kb(s.bajta);
+      // sličica se crta iz izvorne slike, ne iz izlaznog canvasa — nezavisna od formata/quality-ja
+      var slic = nacrtaj(s.src, 68, 68, {
+        rezim: 'crop', boja: state.boja, providno: state.providno, alfaMoguca: true
+      });
+      tr.querySelector('.thumb').src = slic.toDataURL();
     }
     $('redovi').appendChild(tr);
   }
@@ -537,6 +629,21 @@
     proveri('kb: megabajti', kb(3 * 1024 * 1024), '3.00 MB');
     proveri('kb: nepoznato', kb(null), '—');
 
+    proveri('mimeZa: jpg', mimeZa('jpg', false), 'image/jpeg');
+    proveri('mimeZa: png', mimeZa('png', false), 'image/png');
+    proveri('mimeZa: webp', mimeZa('webp', true), 'image/webp');
+    proveri('mimeZa: original bez alfe → jpeg', mimeZa('original', false), 'image/jpeg');
+    proveri('mimeZa: original sa alfom → png', mimeZa('original', true), 'image/png');
+
+    proveri('alfaMoguca: jpeg ne', alfaMoguca('image/jpeg'), false);
+    proveri('alfaMoguca: png da', alfaMoguca('image/png'), true);
+    proveri('alfaMoguca: webp da', alfaMoguca('image/webp'), true);
+
+    proveri('nastavak', nastavak('image/jpeg'), 'jpg');
+    proveri('preimenuj menja nastavak', preimenuj('slika.PNG', 'image/webp'), 'slika.webp');
+    proveri('preimenuj čuva tačke u imenu', preimenuj('a.b.c.jpg', 'image/png'), 'a.b.c.png');
+    proveri('preimenuj bez nastavka', preimenuj('bezTacke', 'image/jpeg'), 'bezTacke.jpg');
+
     // uzorak 100×50, levo crveno, desno plavo
     var uz = document.createElement('canvas');
     uz.width = 100; uz.height = 50;
@@ -594,15 +701,16 @@
     }
     if (!s) { $('pregledInfo').textContent = ''; return; }
 
+    var mime = mimeZa(state.format, s.alfa);
     var d = racunajDimenzije(s.w, s.h, state);
     var izlaz = nacrtaj(s.src, d.w, d.h, {
       rezim: state.rezim, boja: state.boja,
-      providno: state.providno, alfaMoguca: true
+      providno: state.providno, alfaMoguca: alfaMoguca(mime)
     });
     var cv = $('cv');
     cv.width = izlaz.width; cv.height = izlaz.height;
     cv.getContext('2d').drawImage(izlaz, 0, 0);
-    $('pregledInfo').textContent = d.w + ' × ' + d.h + ' px';
+    $('pregledInfo').textContent = d.w + ' × ' + d.h + ' px · ' + nastavak(mime).toUpperCase();
   }
 
   // Upiši state u kontrole trake i uskladi vidljivost/aktivno dugme.
@@ -611,11 +719,16 @@
     $('h').value = state.h;
     $('jedinica').value = state.jedinica;
     $('dpi').value = state.dpi;
+    $('format').value = state.format;
+    $('quality').value = state.quality;
+    $('qualityVal').textContent = state.quality;
     $('boja').value = state.boja;
     $('providno').checked = state.providno;
     $('neUvecavaj').checked = state.neUvecavaj;
 
     $('dpiFld').classList.toggle('hidden', state.jedinica !== 'cm' && state.jedinica !== 'inch');
+    $('kvalFld').classList.toggle('hidden', state.format === 'png');
+    $('provFld').classList.toggle('hidden', mimeZa(state.format, true) === 'image/jpeg');
 
     var dugmad = document.querySelectorAll('.mode');
     for (var i = 0; i < dugmad.length; i++) {
@@ -623,17 +736,63 @@
     }
   }
 
-  $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); };
-  $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); };
-  $('jedinica').onchange = function () { state.jedinica = this.value; renderIzgled(); trenutniPregled(); };
-  $('dpi').oninput = function () { state.dpi = Number(this.value) || 96; renderIzgled(); trenutniPregled(); };
-  $('boja').oninput = function () { state.boja = this.value; renderIzgled(); trenutniPregled(); };
-  $('providno').onchange = function () { state.providno = this.checked; renderIzgled(); trenutniPregled(); };
-  $('neUvecavaj').onchange = function () { state.neUvecavaj = this.checked; renderIzgled(); trenutniPregled(); };
+  // PRIVREMENO: prost prolaz kroz sve stavke, bez progresa, redosleda i zbira.
+  // Zadatak 7 ovo zamenjuje pravim orkestratorom (obradiSve).
+  function obradiSveProsto() {
+    for (var i = 0; i < stavke.length; i++) {
+      var s = stavke[i];
+      if (!s || s.greska) continue;
+      (function (s) {
+        obradiStavku(s, function (greska) {
+          if (greska) s.greska = greska;
+          osveziRed(s);
+        });
+      })(s);
+    }
+  }
+
+  function osveziRed(s) {
+    if (!s.tr) return;
+    if (s.greska) {
+      s.tr.querySelector('[data-novo]').textContent = '—';
+      var e = s.tr.querySelector('[data-ust]');
+      e.textContent = s.greska; e.className = 'bad';
+      return;
+    }
+    s.tr.querySelector('[data-novo]').textContent =
+      s.novaW + '×' + s.novaH + ' · ' + kb(s.blob.size);
+    var u = Math.round((1 - s.blob.size / s.bajta) * 100);
+    var el = s.tr.querySelector('[data-ust]');
+    el.textContent = (u >= 0 ? '−' : '+') + Math.abs(u) + '%';
+    el.className = u >= 0 ? 'save' : 'save bad';
+
+    var dl = s.tr.querySelector('[data-dl]');
+    dl.disabled = false;
+    dl.onclick = function () { preuzmi(s.blob, preimenuj(s.ime, s.noviMime)); };
+  }
+
+  // Preuzimanje bloba pod zadatim imenom.
+  function preuzmi(blob, ime) {
+    var a = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    a.href = url; a.download = ime;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+  $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+  $('jedinica').onchange = function () { state.jedinica = this.value; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+  $('dpi').oninput = function () { state.dpi = Number(this.value) || 96; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+  $('format').onchange = function () { state.format = this.value; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+  $('quality').oninput = function () { state.quality = Number(this.value); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+  $('boja').oninput = function () { state.boja = this.value; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+  $('providno').onchange = function () { state.providno = this.checked; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
+  $('neUvecavaj').onchange = function () { state.neUvecavaj = this.checked; renderIzgled(); trenutniPregled(); obradiSveProsto(); };
 
   var modeDugmad = document.querySelectorAll('.mode');
   for (var mi = 0; mi < modeDugmad.length; mi++) (function (b) {
-    b.onclick = function () { state.rezim = b.getAttribute('data-rezim'); renderIzgled(); trenutniPregled(); };
+    b.onclick = function () { state.rezim = b.getAttribute('data-rezim'); renderIzgled(); trenutniPregled(); obradiSveProsto(); };
   })(modeDugmad[mi]);
 
   renderIzgled();
