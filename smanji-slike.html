@@ -198,6 +198,49 @@
 
   // ---- čiste funkcije ----
 
+  // Ciljne dimenzije iz unosa. Čista funkcija — ne dira DOM ni state.
+  // pw, ph = prirodne dimenzije slike. p = {jedinica, w, h, dpi, neUvecavaj}
+  function racunajDimenzije(pw, ph, p) {
+    // prazno, nula i negativno znače „nije zadato"
+    var W = p.w === '' || p.w === null || p.w === undefined ? null : Number(p.w);
+    var H = p.h === '' || p.h === null || p.h === undefined ? null : Number(p.h);
+    if (W !== null && !(W > 0)) W = null;
+    if (H !== null && !(H > 0)) H = null;
+
+    function uPiksele(v) {
+      if (p.jedinica === 'pixels') return v;
+      if (p.jedinica === 'cm') return v / 2.54 * p.dpi;
+      if (p.jedinica === 'inch') return v * p.dpi;
+      return v;
+    }
+
+    var w = null, h = null;
+    if (p.jedinica === 'percent') {
+      if (W !== null) w = pw * W / 100;
+      if (H !== null) h = ph * H / 100;
+    } else {
+      if (W !== null) w = uPiksele(W);
+      if (H !== null) h = uPiksele(H);
+    }
+
+    if (w === null && h === null) { w = pw; h = ph; }   // oba prazna → original
+    else if (w === null) w = h * pw / ph;               // izvedi iz odnosa
+    else if (h === null) h = w * ph / pw;
+
+    // ne uvećavaj: skaliraj ciljni okvir naniže dok ne stane u original,
+    // uz očuvan odnos zadatog okvira
+    if (p.neUvecavaj) {
+      var minOrig = Math.min(pw, ph);
+      var minWant = Math.min(w, h);
+      if (minWant > minOrig) {
+        var f = minOrig / minWant;
+        w *= f; h *= f;
+      }
+    }
+
+    return { w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)) };
+  }
+
   // ---- slike ----
 
   // ---- obrada ----
@@ -218,7 +261,55 @@
     }
 
     // ---- tvrdnje ----
-    proveri('kostur radi', 1 + 1, 2);
+    function d(pw, ph, p) { return racunajDimenzije(pw, ph, p); }
+
+    proveri('pixels: oba data',
+      d(1500, 1000, { jedinica: 'pixels', w: 800, h: 600, dpi: 96, neUvecavaj: false }),
+      { w: 800, h: 600 });
+
+    proveri('pixels: prazna visina se izvodi iz odnosa',
+      d(1500, 1000, { jedinica: 'pixels', w: 600, h: '', dpi: 96, neUvecavaj: false }),
+      { w: 600, h: 400 });
+
+    proveri('pixels: prazna širina se izvodi iz odnosa',
+      d(1500, 1000, { jedinica: 'pixels', w: '', h: 400, dpi: 96, neUvecavaj: false }),
+      { w: 600, h: 400 });
+
+    proveri('oba prazna daju original',
+      d(1500, 1000, { jedinica: 'pixels', w: '', h: '', dpi: 96, neUvecavaj: false }),
+      { w: 1500, h: 1000 });
+
+    proveri('percent: 50% obe strane',
+      d(1500, 1000, { jedinica: 'percent', w: 50, h: 50, dpi: 96, neUvecavaj: false }),
+      { w: 750, h: 500 });
+
+    proveri('percent: 50% širine, visina iz odnosa',
+      d(1500, 1000, { jedinica: 'percent', w: 50, h: '', dpi: 96, neUvecavaj: false }),
+      { w: 750, h: 500 });
+
+    proveri('cm pri 300 dpi',
+      d(3000, 2000, { jedinica: 'cm', w: 15, h: 10, dpi: 300, neUvecavaj: false }),
+      { w: 1772, h: 1181 });
+
+    proveri('inch pri 300 dpi',
+      d(3000, 2000, { jedinica: 'inch', w: 6, h: 4, dpi: 300, neUvecavaj: false }),
+      { w: 1800, h: 1200 });
+
+    proveri('neUvecavaj sprečava uvećanje portreta',
+      d(1000, 1500, { jedinica: 'pixels', w: 1600, h: '', dpi: 96, neUvecavaj: true }),
+      { w: 1000, h: 1500 });
+
+    proveri('neUvecavaj ne dira sliku veću od okvira',
+      d(3000, 2000, { jedinica: 'pixels', w: 1600, h: '', dpi: 96, neUvecavaj: true }),
+      { w: 1600, h: 1067 });
+
+    proveri('neUvecavaj čuva odnos zadatog okvira',
+      d(400, 400, { jedinica: 'pixels', w: 800, h: 600, dpi: 96, neUvecavaj: true }),
+      { w: 533, h: 400 });
+
+    proveri('nula i negativno se tretiraju kao prazno',
+      d(1500, 1000, { jedinica: 'pixels', w: 0, h: -5, dpi: 96, neUvecavaj: false }),
+      { w: 1500, h: 1000 });
 
     // ---- ispis ----
     var pre = document.createElement('pre');
@@ -228,6 +319,9 @@
     document.body.appendChild(pre);
     document.title = (pali === ukupno ? 'OK ' : 'PALO ') + pali + '/' + ukupno;
   }
+
+  // harness je dostupan i iz konzole, jer neka okruženja gube #test iz adrese
+  window.samoprovera = samoprovera;
 
   if (location.hash === '#test') { samoprovera(); return; }
 
