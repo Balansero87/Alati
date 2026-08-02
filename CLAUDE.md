@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Two unrelated browser tools, both written as single self-contained HTML files — inline CSS, one IIFE of ES5-style JavaScript, zero dependencies, no build step, no package manager. Each is meant to be opened straight from disk and to keep working on older mobile browsers.
+Three unrelated tools. Two are browser tools written as single self-contained HTML files — inline CSS, one IIFE of ES5-style JavaScript, zero dependencies, no build step, no package manager; each is meant to be opened straight from disk and to keep working on older mobile browsers. The third is an Electron desktop app and is the one exception to all of that.
 
 ```
 prevodilac/       Serbian ⇄ German translator
@@ -15,13 +15,21 @@ smanji-slike/     image resizer and compressor
   smanji-slike.html standalone, double-click to open
   smanji-slike.ico  icon used by the desktop shortcut
 
+kalkulator/       Electron desktop calculator (Windows, NSIS installer)
+  main.js           main process — owns the data, only thing that touches disk
+  preload.js        contextBridge, the renderer's entire API surface
+  skladiste.js      JSON persistence in app.getPath('userData')
+  renderer/         index.html, stil.css, renderer.js, racunanje.js
+  samoprovera.js    72 assertions, no framework — `npm test`
+  kalkulator.ico    installer and window icon
+
 docs/
   specifikacije/    design specs (+ the interactive mockup for smanji-slike)
   planovi/          implementation plans
   smanji-slike-dnevnik-izrade.md   review findings and rulings from the build
 ```
 
-The two tools share nothing — no code, no assets, no conventions beyond style. Work on one without touching the other.
+The three tools share nothing — no code, no assets, no conventions beyond style. Work on one without touching the others.
 
 This **is** a git repository (branch `main`). Commit when the user asks.
 
@@ -32,7 +40,7 @@ Every tool gets its own folder. **Never add tool files to the repository root** 
 When building a new tool:
 
 1. **Create `<ime-alata>/` at the root**, kebab-case, Serbian name. The main file is named after the folder: `<ime-alata>/<ime-alata>.html`. Everything belonging to that tool — icons, PWA wrapper, assets — goes inside that folder and nowhere else.
-2. **Follow the house style**: single self-contained HTML, inline CSS, one IIFE, ES5 (`var`, function declarations), zero dependencies, no build step. UI strings and code comments in Serbian (Latin script).
+2. **Follow the house style**: single self-contained HTML, inline CSS, one IIFE, ES5 (`var`, function declarations), zero dependencies, no build step. UI strings and code comments in Serbian (Latin script). If the tool genuinely cannot be a browser page — it needs the file system, a real installer, or OS integration — the single-file rule is off, but everything else still holds: ES5 style, Serbian, and no dependency you did not have to add. `kalkulator/` is the only tool that has taken this exit so far.
 3. **Add a built-in self-check** if the tool has pure functions worth testing — same pattern as `smanji-slike`: a `proveri(naziv, dobio, ocekivano)` helper, a `samoprovera()` runner behind `#test`, and `window.samoprovera` exposed for the console. No framework, no dependency.
 4. **Write the spec to `docs/specifikacije/`** and the implementation plan to `docs/planovi/`, both dated `YYYY-MM-DD-<ime-alata>-*`.
 5. **Update `README.md`** — this is the step that is easiest to skip and the one the user explicitly asked for:
@@ -123,6 +131,49 @@ Add an assertion for every pure function you touch. `proveri(naziv, dobio, oceki
 **`ImageBitmap` is kept on `s.src` for the item's lifetime** and closed only in `ukloniStavku`, so changing a setting does not re-decode every file. The memory cost of that trade-off is documented under „Poznata ograničenja" in the spec.
 
 **Settings persist** to `localStorage` under `smanjiSlike.v1` in try/catch. `format` is accepted only if a matching `<option>` still exists — WEBP detection removes that option on browsers that cannot encode it, and must run *after* `ucitaj()`.
+
+## Kalkulator
+
+Electron desktop app. Expression-line calculator (`(2+3)*4`, not press-number-press-operator) with a history panel that persists to disk.
+
+```bash
+cd "E:\Program Files\Claude code\kalkulator"
+npm start          # run it
+npm test           # 72 assertions, no framework, no browser
+npm run test:ui    # launches the real app, drives the UI, saves a screenshot
+npm run dist       # NSIS installer into izlaz/
+npm run ikona      # regenerate kalkulator.ico
+```
+
+`node_modules/` and `izlaz/` are gitignored. **npm blocks Electron's postinstall in this environment** — after a fresh `npm install`, `node_modules/electron/dist/electron.exe` will be missing. Fix with `node node_modules/electron/install.js`.
+
+### Architecture
+
+**The renderer is sandboxed and cannot reach the disk.** `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. `preload.js` exposes exactly four functions on `window.kalkulatorMost` and nothing else. Every persistence request crosses IPC (`kalk:istorija-ucitaj`, `-dodaj`, `-obrisi`, `kalk:gde-su-podaci`). Do not widen this bridge to "make something easier" — that is the whole security model.
+
+**`renderer/racunanje.js` is pure and is the only part worth testing.** Tokenizer → shunting-yard → postfix evaluator, plus `formatiraj()`. No DOM, no Electron, no `fs`. A UMD tail lets the same file load as a plain `<script>` in the renderer and as a `require()` in `samoprovera.js`. Keep it that way — the moment it touches the DOM, the test suite needs a browser.
+
+**Implicit multiplication goes on the operator stack, not the output.** `2(3+1)` and `(1+1)2` insert a `*` via `ubaciOperator()`, which runs the normal precedence pop-loop. Pushing `'*'` straight to `izlaz` produces `[2,'*',3,1,'+']` and blows up at evaluation — this was a real bug caught by the self-check.
+
+**Percent is postfix "divide by 100", always.** `50%` → `0.5`, `2+3%` → `2.03`. Windows Calculator's context-sensitive percent (`50+10%` → `55`) is deliberately not implemented; it is undefined for `(2+3)%` and untestable. Documented in the spec.
+
+**Writes are atomic and corruption is survivable.** `skladiste.js` writes `podaci.json.tmp` then renames over the real file. Unparseable JSON is renamed to `podaci.json.osteceno` and the app starts empty rather than crashing or overwriting. History is capped at 200 records, newest first.
+
+**`skladiste.js` takes the file path as an argument** instead of calling `app.getPath()` itself. That is why the self-check can exercise it against a temp folder with no Electron running. Do not inline the path.
+
+**Permanent vs transient, again:** an expression that fails to evaluate shows a red message and is **not** written to history. An unfinished expression while typing is not an error at all — the preview line just goes blank.
+
+### Tests
+
+`samoprovera.js` follows the same pattern as `smanji-slike`: `proveri(naziv, dobio, ocekivano)` compared via `JSON.stringify`, plus `proveriGresku(naziv, funkcija, poruka)` for the error paths. Exit code 0 or 1, so it works in a pipeline. Add an assertion for every pure function you touch.
+
+`provera-ui.js` (`npm run test:ui`) covers the parts `samoprovera.js` cannot: it `require`s the **real** `main.js` after pointing `userData` at a temp folder, then drives the actual page with `webContents.executeJavaScript` and saves `capturePage()` to a PNG. 16 checks — buttons, keyboard, error path, history, and the contents of `podaci.json`. Do not verify this app by screenshotting the desktop; drive it through `webContents`.
+
+`provera-ui.js` and `napravi-ikonu.js` are dev-only and excluded from the installer by the `files` list in `package.json`. `provera-ui.js` is the one file here that uses `async`/`await` — it never ships, and the alternative is a promise pyramid.
+
+### Icon
+
+`kalkulator.ico` is generated by `napravi-ikonu.js` (`npm run ikona`) — RGBA buffer, signed-distance rounded rectangles for antialiasing, PNG via Node's `zlib`, PNG entries packed into an ICO container, six sizes (256/128/64/48/32/16). No image library. If the icon needs changing, edit `nacrtaj()` and rerun rather than adding a dependency.
 
 ## Language conventions
 

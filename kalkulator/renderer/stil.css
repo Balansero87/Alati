@@ -1,0 +1,282 @@
+/* Kalkulator — izgled. Svetla i tamna tema, prati podesavanje sistema. */
+
+:root {
+  --pozadina: #f4f5f7;
+  --panel: #ffffff;
+  --ivica: #e2e5ea;
+  --tekst: #16181d;
+  --tekst-blaz: #6b7280;
+  --dugme: #ffffff;
+  --dugme-hover: #f0f2f5;
+  --dugme-pritisnuto: #e4e7ec;
+  --operator: #eef2ff;
+  --operator-tekst: #3b4ee0;
+  --naglasak: #3b4ee0;
+  --naglasak-tekst: #ffffff;
+  --greska: #c0362c;
+  --senka: 0 1px 2px rgba(16, 18, 24, .06), 0 4px 12px rgba(16, 18, 24, .05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pozadina: #16181d;
+    --panel: #1e2128;
+    --ivica: #2c3038;
+    --tekst: #eceef2;
+    --tekst-blaz: #939aa8;
+    --dugme: #262a32;
+    --dugme-hover: #2f343d;
+    --dugme-pritisnuto: #383e49;
+    --operator: #262c46;
+    --operator-tekst: #9aa8ff;
+    --naglasak: #4b5ce8;
+    --naglasak-tekst: #ffffff;
+    --greska: #ff8a80;
+    --senka: none;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  gap: 18px;
+  padding: 18px;
+  background: var(--pozadina);
+  color: var(--tekst);
+  font: 15px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ---------- levo: kalkulator ---------- */
+
+.kalkulator {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ekran {
+  background: var(--panel);
+  border: 1px solid var(--ivica);
+  border-radius: 14px;
+  box-shadow: var(--senka);
+  padding: 14px 18px 12px;
+}
+
+.ekran-poruka {
+  min-height: 20px;
+  font-size: 13px;
+  color: var(--tekst-blaz);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ekran-poruka.greska { color: var(--greska); }
+
+.ekran-unos {
+  width: 100%;
+  border: 0;
+  padding: 2px 0;
+  background: transparent;
+  color: inherit;
+  font: 600 clamp(26px, 5vw, 40px)/1.25 inherit;
+  text-align: right;
+  outline: none;
+  user-select: text;
+}
+
+.ekran-unos::placeholder { color: var(--tekst-blaz); opacity: .5; }
+
+.ekran-pregled {
+  min-height: 24px;
+  font-size: 17px;
+  color: var(--tekst-blaz);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- dugmad ---------- */
+
+.dugmad {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(6, minmax(46px, 1fr));
+  gap: 8px;
+}
+
+.dugme {
+  border: 1px solid var(--ivica);
+  border-radius: 12px;
+  background: var(--dugme);
+  color: var(--tekst);
+  font: 500 20px inherit;
+  cursor: pointer;
+  transition: background .09s ease, transform .06s ease;
+}
+
+.dugme:hover { background: var(--dugme-hover); }
+.dugme:active,
+.dugme.pritisnuto { background: var(--dugme-pritisnuto); transform: translateY(1px); }
+.dugme:focus-visible { outline: 2px solid var(--naglasak); outline-offset: 2px; }
+
+.dugme-radnja { color: var(--tekst-blaz); font-size: 18px; }
+
+.dugme-operator {
+  background: var(--operator);
+  color: var(--operator-tekst);
+  border-color: transparent;
+  font-size: 22px;
+}
+
+.dugme-jednako {
+  grid-row: span 2;
+  background: var(--naglasak);
+  color: var(--naglasak-tekst);
+  border-color: transparent;
+  font-size: 24px;
+}
+
+.dugme-jednako:hover { filter: brightness(1.08); background: var(--naglasak); }
+.dugme-jednako:active { filter: brightness(.94); background: var(--naglasak); }
+
+.dugme-nula { grid-column: span 2; }
+
+/* ---------- desno: istorija ---------- */
+
+.istorija {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 260px;
+  background: var(--panel);
+  border: 1px solid var(--ivica);
+  border-radius: 14px;
+  box-shadow: var(--senka);
+  overflow: hidden;
+}
+
+.istorija-zaglavlje {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ivica);
+}
+
+.istorija-zaglavlje h1 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--tekst-blaz);
+}
+
+.veza {
+  border: 0;
+  padding: 2px 4px;
+  background: none;
+  color: var(--tekst-blaz);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.veza:hover { color: var(--greska); background: var(--dugme-hover); }
+.veza:disabled { opacity: .4; cursor: default; }
+.veza:disabled:hover { color: var(--tekst-blaz); background: none; }
+
+.istorija-lista {
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.istorija-stavka {
+  width: 100%;
+  display: block;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+
+.istorija-stavka:hover { background: var(--dugme-hover); }
+.istorija-stavka:focus-visible { outline: 2px solid var(--naglasak); outline-offset: -2px; }
+
+.istorija-izraz {
+  display: block;
+  font-size: 12px;
+  color: var(--tekst-blaz);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.istorija-rezultat {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.istorija-prazna {
+  margin: 0;
+  padding: 18px 16px;
+  font-size: 13px;
+  color: var(--tekst-blaz);
+  text-align: center;
+}
+
+.istorija-prazna[hidden] { display: none; }
+
+.podnozje {
+  padding: 8px 12px;
+  border-top: 1px solid var(--ivica);
+  font-size: 11px;
+  color: var(--tekst-blaz);
+  display: flex;
+  gap: 5px;
+}
+
+.podnozje-oznaka { flex: 0 0 auto; }
+
+.podnozje-putanja {
+  flex: 1 1 auto;
+  min-width: 0;
+  direction: rtl;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: text;
+}
+
+/* Uzak prozor — istorija ide ispod kalkulatora. */
+@media (max-width: 700px) {
+  body { flex-direction: column; overflow: auto; }
+  .istorija { flex: 0 0 auto; max-height: 42vh; }
+}

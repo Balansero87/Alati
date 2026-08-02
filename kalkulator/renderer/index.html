@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;">
+  <title>Kalkulator</title>
+  <link rel="stylesheet" href="stil.css">
+</head>
+<body>
+
+<main class="kalkulator">
+
+  <section class="ekran">
+    <div class="ekran-poruka" id="poruka">&nbsp;</div>
+    <input class="ekran-unos" id="unos" type="text" inputmode="text"
+           spellcheck="false" autocomplete="off" placeholder="0"
+           aria-label="Izraz za racunanje">
+    <div class="ekran-pregled" id="pregled">&nbsp;</div>
+  </section>
+
+  <section class="dugmad" id="dugmad">
+    <button type="button" class="dugme dugme-radnja" data-radnja="ocisti">C</button>
+    <button type="button" class="dugme dugme-radnja" data-radnja="brisi">⌫</button>
+    <button type="button" class="dugme dugme-radnja" data-unos="%">%</button>
+    <button type="button" class="dugme dugme-operator" data-unos="/">÷</button>
+
+    <button type="button" class="dugme dugme-radnja" data-unos="(">(</button>
+    <button type="button" class="dugme dugme-radnja" data-unos=")">)</button>
+    <button type="button" class="dugme dugme-radnja" data-radnja="znak">±</button>
+    <button type="button" class="dugme dugme-operator" data-unos="*">×</button>
+
+    <button type="button" class="dugme" data-unos="7">7</button>
+    <button type="button" class="dugme" data-unos="8">8</button>
+    <button type="button" class="dugme" data-unos="9">9</button>
+    <button type="button" class="dugme dugme-operator" data-unos="-">−</button>
+
+    <button type="button" class="dugme" data-unos="4">4</button>
+    <button type="button" class="dugme" data-unos="5">5</button>
+    <button type="button" class="dugme" data-unos="6">6</button>
+    <button type="button" class="dugme dugme-operator" data-unos="+">+</button>
+
+    <button type="button" class="dugme" data-unos="1">1</button>
+    <button type="button" class="dugme" data-unos="2">2</button>
+    <button type="button" class="dugme" data-unos="3">3</button>
+    <button type="button" class="dugme dugme-jednako" data-radnja="izracunaj">=</button>
+
+    <button type="button" class="dugme dugme-nula" data-unos="0">0</button>
+    <button type="button" class="dugme" data-unos=".">,</button>
+  </section>
+
+</main>
+
+<aside class="istorija">
+  <header class="istorija-zaglavlje">
+    <h1>Istorija</h1>
+    <button type="button" class="veza" id="obrisiIstoriju">Obriši sve</button>
+  </header>
+
+  <ul class="istorija-lista" id="istorijaLista"></ul>
+
+  <p class="istorija-prazna" id="istorijaPrazna">Ovde se pamte računi. Preživljavaju gašenje aplikacije.</p>
+
+  <footer class="podnozje">
+    <span class="podnozje-oznaka">Podaci:</span>
+    <span class="podnozje-putanja" id="putanjaPodataka" title="">…</span>
+  </footer>
+</aside>
+
+<script src="racunanje.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{
+  "name": "kalkulator",
+  "version": "1.0.0",
+  "description": "Jednostavan kalkulator sa istorijom racuna koja se cuva na disk",
+  "author": "Dusko",
+  "license": "MIT",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node samoprovera.js",
+    "test:ui": "electron provera-ui.js",
+    "ikona": "node napravi-ikonu.js kalkulator.ico",
+    "pack": "electron-builder --win --dir",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "rs.dusko.kalkulator",
+    "productName": "Kalkulator",
+    "copyright": "Copyright © 2026 Dusko",
+    "directories": {
+      "output": "izlaz"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "skladiste.js",
+      "renderer/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "kalkulator.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Kalkulator",
+      "artifactName": "Kalkulator-${version}-instaler.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
+  }
+}
