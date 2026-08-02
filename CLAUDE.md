@@ -9,18 +9,21 @@ Three unrelated tools. Two are browser tools written as single self-contained HT
 ```
 prevodilac/       Serbian ⇄ German translator
   prevodilac.html   standalone, double-click to open
-  web/              same file as index.html + PWA wrapper (manifest, sw.js, icons)
+  web/              same file as index.html + PWA wrapper (manifest.webmanifest, sw.js, icons)
 
 smanji-slike/     image resizer and compressor
   smanji-slike.html standalone, double-click to open
   smanji-slike.ico  icon used by the desktop shortcut
 
 kalkulator/       Electron desktop calculator (Windows, NSIS installer)
+  package.json      entry point, npm scripts, electron-builder config
   main.js           main process — owns the data, only thing that touches disk
   preload.js        contextBridge, the renderer's entire API surface
   skladiste.js      JSON persistence in app.getPath('userData')
   renderer/         index.html, stil.css, renderer.js, racunanje.js
   samoprovera.js    72 assertions, no framework — `npm test`
+  provera-ui.js     drives the real app through webContents — `npm run test:ui`
+  napravi-ikonu.js  generates kalkulator.ico — `npm run ikona`
   kalkulator.ico    installer and window icon
 
 docs/
@@ -39,15 +42,15 @@ Every tool gets its own folder. **Never add tool files to the repository root** 
 
 When building a new tool:
 
-1. **Create `<ime-alata>/` at the root**, kebab-case, Serbian name. The main file is named after the folder: `<ime-alata>/<ime-alata>.html`. Everything belonging to that tool — icons, PWA wrapper, assets — goes inside that folder and nowhere else.
+1. **Create `<ime-alata>/` at the root**, kebab-case, Serbian name. The entry point is named after the folder — `<ime-alata>/<ime-alata>.html` for a browser tool, `package.json` + `main.js` for a desktop app. Everything belonging to that tool — icons, PWA wrapper, build config, assets — goes inside that folder and nowhere else.
 2. **Follow the house style**: single self-contained HTML, inline CSS, one IIFE, ES5 (`var`, function declarations), zero dependencies, no build step. UI strings and code comments in Serbian (Latin script). If the tool genuinely cannot be a browser page — it needs the file system, a real installer, or OS integration — the single-file rule is off, but everything else still holds: ES5 style, Serbian, and no dependency you did not have to add. `kalkulator/` is the only tool that has taken this exit so far.
-3. **Add a built-in self-check** if the tool has pure functions worth testing — same pattern as `smanji-slike`: a `proveri(naziv, dobio, ocekivano)` helper, a `samoprovera()` runner behind `#test`, and `window.samoprovera` exposed for the console. No framework, no dependency.
+3. **Add a built-in self-check** if the tool has pure functions worth testing. Always the same `proveri(naziv, dobio, ocekivano)` helper comparing via `JSON.stringify`, always printing `OK n/n` or `PALO n/n`, never a framework or a dependency. Only the way it is launched differs: a browser tool puts the runner behind `#test` and exposes `window.samoprovera` for the console (`smanji-slike`); a Node or Electron tool is a plain script with an exit code (`kalkulator/samoprovera.js`, run by `npm test`).
 4. **Write the spec to `docs/specifikacije/`** and the implementation plan to `docs/planovi/`, both dated `YYYY-MM-DD-<ime-alata>-*`.
 5. **Update `README.md`** — this is the step that is easiest to skip and the one the user explicitly asked for:
    - a section for the tool: what it does, its path, and **whether it needs internet**
    - a row in the „Šta je gde" table
    - if it launches from a desktop shortcut, say so
-6. **If it should launch like a normal program**, generate an `.ico` in the tool's folder and create a desktop shortcut running `chrome.exe --app=file:///...`. The shortcut hard-codes an absolute path — recreate it if the file ever moves.
+6. **If it should launch like a normal program**, generate an `.ico` in the tool's folder. A browser tool then needs a desktop shortcut running `chrome.exe --app=file:///...`; that shortcut hard-codes an absolute path, so recreate it if the file ever moves. A packaged desktop app instead hands the `.ico` to its installer (`build.win.icon` in `kalkulator/package.json`) and the installer creates the shortcuts — nothing is hard-coded.
 
 Do not reorganise or rename an existing tool's folder while adding a new one.
 
@@ -177,15 +180,17 @@ npm run ikona      # regenerate kalkulator.ico
 
 ## Language conventions
 
-Both tools: UI, all user-facing strings, and all code comments are in Serbian (Latin script). Keep new code in the same style — `var`, function declarations, no ES6+ syntax, no modules, no template literals.
+All three tools: UI, all user-facing strings, and all code comments are in Serbian (Latin script). Keep new code in the same style — `var`, function declarations, no ES6+ syntax, no modules, no template literals.
 
-Check before committing:
+Check before committing. **This should print nothing** — any hit is a real violation:
 
 ```bash
-grep -nE "\blet\b|\bconst\b|=>|\bclass\b" smanji-slike/smanji-slike.html
+grep -nE "\blet\b|\bconst\b|=>" prevodilac/prevodilac.html smanji-slike/smanji-slike.html kalkulator/main.js kalkulator/preload.js kalkulator/skladiste.js kalkulator/renderer/*.js
 ```
 
-(`class` will match HTML attributes — read the hits, do not trust the count.)
+`\bclass\b` is deliberately out of that pattern — it matched HTML `class` attributes 42 times in one file, so nobody ever read the hits and the check became noise. Look for real classes separately when you have reason to.
+
+`kalkulator/provera-ui.js` and `kalkulator/napravi-ikonu.js` are not in the list on purpose: they are dev-only, never ship, and `provera-ui.js` uses `async`/`await` because the alternative is a pyramid of callbacks.
 
 ## Browser Automation — Native Navigation Only (HARD RULE)
 
