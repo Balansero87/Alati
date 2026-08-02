@@ -76,21 +76,14 @@ npx serve "E:\Program Files\Claude code\prevodilac\web"
 
 There is no test suite for this tool. Verify in the browser (console + rendered output).
 
-### Architecture
+### Do not undo these
 
-**Direction detection is local, deliberately.** `guessLang()` scores the input against hard-coded Serbian and German word lists (plus Cyrillic and diacritic checks) and the resolved direction is always sent explicitly to the translation service. The services' own `auto` detection misidentifies short Serbian text, so it is never used. The `dirSel` dropdown overrides detection. Ties fall back to Serbian → German, the primary use case.
-
-**Translation is a two-service chain with chunking.** `translateChunk()` tries Google's unofficial `translate_a/single` endpoint and silently falls back to MyMemory. Both are keyless and anonymous, so limits differ: text is split at 3000 chars for the main path (`runDirection`) and MyMemory re-splits its input at 450 chars. `splitText()` cuts on paragraph → sentence → word boundaries. A chunk that fails is left as the original text and counted in `res.failed`, so a partial failure degrades instead of losing the whole translation; only an all-chunks failure throws.
-
-**Auto-correcting a wrong direction guess.** If detection was on `auto`, no chunk failed, and the output came back identical to the input, `translateText()` retries in the opposite direction and keeps whichever result actually changed.
-
-**Serbian output is transliterated.** The services return Serbian in Cyrillic; `toLatin()` converts it, handling the LJ/NJ/DŽ digraph casing rule.
-
-**Sie/du register switching is pure post-processing.** `rawOut` holds the untouched translation. `renderOutput()` applies `toSie()` / `toDu()` on top of it, so toggling register never re-fetches. Both run per-sentence via `eachSentence()` and combine: greeting/sign-off phrase tables (`PHRASES_DU`, `PHRASES_SIE`), pronoun substitution, and verb conjugation built from `DU_IRREG`, `DU_IMP`, the derived `SIE_IRREG` inverse map, and morphological fallbacks (`duForm`, `sieForm`, `impForm`, `stemOf`). Sentence position decides which rule fires. The register buttons only appear when the target language is German.
-
-**Request and state discipline.** `reqId` increments per request and stale responses are dropped. `lastKey` (`direction|text`) suppresses redundant re-translation; anything that must force a re-run clears it before calling `translate(true)`. Input is debounced 500 ms; Ctrl/Cmd+Enter translates immediately. State persists to `localStorage` under `prevodilac.v3`, wrapped in try/catch for private mode.
-
-**Service worker is network-first** (`web/sw.js`, cache `prevodilac-v3`), so a fresh deploy reaches users without bumping a version manually; the cache is only an offline fallback. Cross-origin requests return early and are never cached. When changing the cached asset list, bump the `CACHE` name so `activate` purges the old one. All paths inside `web/` are relative (`./`), so the folder can be moved as a unit.
+- **Never send `auto` to the translation services.** `guessLang()` resolves the direction locally and it is always sent explicitly, because the services misidentify short Serbian text. `dirSel` overrides detection; ties fall back to SR → DE. If detection was on `auto` and the output came back identical to the input, `translateText()` retries the other way.
+- **A failed chunk degrades, it does not throw.** It is left as the original text and counted in `res.failed`; only an all-chunks failure throws. The two services have different limits (3000 chars on the main path, 450 for MyMemory) — they are not interchangeable numbers.
+- **Sie/du switching never re-fetches.** `rawOut` holds the untouched translation and `renderOutput()` applies the register on top of it. Keep it pure post-processing.
+- **Clear `lastKey` before forcing a re-run.** It suppresses redundant translation as `direction|text`, so anything calling `translate(true)` must clear it first or nothing happens. Stale responses are dropped via `reqId`.
+- **Bump the `CACHE` name in `web/sw.js` when changing the cached asset list**, or `activate` will not purge the old one. The worker is network-first on purpose — the cache is only an offline fallback. Paths inside `web/` are relative so the folder moves as a unit.
+- Serbian comes back in Cyrillic; `toLatin()` converts it and handles the LJ/NJ/DŽ digraph casing rule. State lives in `localStorage` under `prevodilac.v3`.
 
 ## Smanji slike
 
@@ -112,28 +105,17 @@ start "" "E:\Program Files\Claude code\smanji-slike\smanji-slike.html#test"
 
 `#test` replaces the page with the results and puts `OK 51/51` or `PALO n/51` in the tab title. The runner is also exposed as `window.samoprovera()` so it can be called from the console — some environments drop the `#hash` on navigation.
 
-Add an assertion for every pure function you touch. `proveri(naziv, dobio, ocekivano)` compares via `JSON.stringify`.
+The testable core is four units, the first three pure or nearly so: `racunajDimenzije`, `nacrtaj`, `uKodiraj`, `napraviZip`. Add an assertion for every one you touch. `proveri(naziv, dobio, ocekivano)` compares via `JSON.stringify`.
 
-### Architecture
+### Do not undo these
 
-**The pipeline is four independent units,** the first three pure or nearly so — that is the only reason they can be tested without a browser around them:
-
-- `racunajDimenzije(pw, ph, p)` → `{w, h}`. Units `percent / pixels / cm / inch`, empty field derived from aspect ratio, `neUvecavaj` scaling the target box down so it fits inside the original. Touches no DOM and no shared state.
-- `nacrtaj(src, w, h, p)` → canvas of exactly `w`×`h`. `fit` uses `Math.min`, `crop` uses `Math.max`, `stretch` ignores aspect ratio. Background is painted unless `providno && alfaMoguca`.
-- `uKodiraj(canvas, mime, quality, cb)` — wraps `toBlob`, catching both the synchronous throw and a `null` blob.
-- `napraviZip(unosi)` → `Blob`. Hand-written, store-only (method 0), local headers + central directory + EOCD, CRC-32 from a lazily built table, UTF-8 names with flag bit 11. Deflate would gain ~0 on already-compressed images.
-
-**`efektivnoStanje()` sanitises before computing, not while typing.** Any DPI that is not a positive number counts as 96 for the calculation, but the field and `localStorage` keep whatever the user typed — otherwise clearing the field to retype it would fight the user.
-
-**Permanent and transient errors are different things.** `s.trajnaGreska` (decode failed — the file will never become an image) skips the item forever. A plain `s.greska` from processing depends on current settings, so it is cleared before every new pass and the item is retried. Conflating them strands items permanently.
-
-**`stavke` slots are reserved with `null` and filled asynchronously** so rows keep input order regardless of decode order. **Every read of `stavke[i]` must check the slot is not `null` first** — this has been a crash twice.
-
-**Processing is sequential on purpose,** one image at a time with a `setTimeout(dalje, 0)` between them. Guarding via `uToku`/`zahtev` restarts the pass when settings change mid-run. A failed image degrades to an error row; the batch continues.
-
-**`ImageBitmap` is kept on `s.src` for the item's lifetime** and closed only in `ukloniStavku`, so changing a setting does not re-decode every file. The memory cost of that trade-off is documented under „Poznata ograničenja" in the spec.
-
-**Settings persist** to `localStorage` under `smanjiSlike.v1` in try/catch. `format` is accepted only if a matching `<option>` still exists — WEBP detection removes that option on browsers that cannot encode it, and must run *after* `ucitaj()`.
+- **Every read of `stavke[i]` must check the slot is not `null` first.** Slots are reserved with `null` and filled asynchronously so rows keep input order regardless of decode order. This has been a crash twice.
+- **Permanent and transient errors are different things.** `s.trajnaGreska` (decode failed — the file will never become an image) skips the item forever. A plain `s.greska` depends on current settings, so it is cleared before every new pass and the item is retried. Conflating them strands items permanently.
+- **`efektivnoStanje()` sanitises before computing, not while typing.** A DPI that is not a positive number counts as 96 for the calculation, but the field and `localStorage` keep whatever the user typed — otherwise clearing the field to retype it would fight the user.
+- **Processing is sequential on purpose,** one image at a time with `setTimeout(dalje, 0)` between them; `uToku`/`zahtev` restart the pass when settings change mid-run. Do not parallelise it. A failed image degrades to an error row and the batch continues.
+- **`ImageBitmap` stays on `s.src` for the item's lifetime**, closed only in `ukloniStavku`, so changing a setting does not re-decode every file. The memory cost is documented under „Poznata ograničenja" in the spec.
+- **`format` is read back from `localStorage` only if a matching `<option>` still exists**, and WEBP detection must run *after* `ucitaj()`. Settings live under `smanjiSlike.v1`, in try/catch for private mode.
+- The ZIP writer is store-only by design — deflate gains ~0 on already-compressed images.
 
 ## Kalkulator
 
@@ -150,33 +132,24 @@ npm run ikona      # regenerate kalkulator.ico
 
 `node_modules/` and `izlaz/` are gitignored. **npm blocks Electron's postinstall in this environment** — after a fresh `npm install`, `node_modules/electron/dist/electron.exe` will be missing. Fix with `node node_modules/electron/install.js`.
 
-### Architecture
-
-**The renderer is sandboxed and cannot reach the disk.** `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. `preload.js` exposes exactly four functions on `window.kalkulatorMost` and nothing else. Every persistence request crosses IPC (`kalk:istorija-ucitaj`, `-dodaj`, `-obrisi`, `kalk:gde-su-podaci`). Do not widen this bridge to "make something easier" — that is the whole security model.
-
-**`renderer/racunanje.js` is pure and is the only part worth testing.** Tokenizer → shunting-yard → postfix evaluator, plus `formatiraj()`. No DOM, no Electron, no `fs`. A UMD tail lets the same file load as a plain `<script>` in the renderer and as a `require()` in `samoprovera.js`. Keep it that way — the moment it touches the DOM, the test suite needs a browser.
-
-**Implicit multiplication goes on the operator stack, not the output.** `2(3+1)` and `(1+1)2` insert a `*` via `ubaciOperator()`, which runs the normal precedence pop-loop. Pushing `'*'` straight to `izlaz` produces `[2,'*',3,1,'+']` and blows up at evaluation — this was a real bug caught by the self-check.
-
-**Percent is postfix "divide by 100", always.** `50%` → `0.5`, `2+3%` → `2.03`. Windows Calculator's context-sensitive percent (`50+10%` → `55`) is deliberately not implemented; it is undefined for `(2+3)%` and untestable. Documented in the spec.
-
-**Writes are atomic and corruption is survivable.** `skladiste.js` writes `podaci.json.tmp` then renames over the real file. Unparseable JSON is renamed to `podaci.json.osteceno` and the app starts empty rather than crashing or overwriting. History is capped at 200 records, newest first.
-
-**`skladiste.js` takes the file path as an argument** instead of calling `app.getPath()` itself. That is why the self-check can exercise it against a temp folder with no Electron running. Do not inline the path.
-
-**Permanent vs transient, again:** an expression that fails to evaluate shows a red message and is **not** written to history. An unfinished expression while typing is not an error at all — the preview line just goes blank.
-
 ### Tests
 
-`samoprovera.js` follows the same pattern as `smanji-slike`: `proveri(naziv, dobio, ocekivano)` compared via `JSON.stringify`, plus `proveriGresku(naziv, funkcija, poruka)` for the error paths. Exit code 0 or 1, so it works in a pipeline. Add an assertion for every pure function you touch.
+`samoprovera.js` — **72 assertions**, `proveri(naziv, dobio, ocekivano)` plus `proveriGresku(naziv, funkcija, poruka)` for the error paths, exit code 0 or 1. Add an assertion for every pure function you touch.
 
-`provera-ui.js` (`npm run test:ui`) covers the parts `samoprovera.js` cannot: it `require`s the **real** `main.js` after pointing `userData` at a temp folder, then drives the actual page with `webContents.executeJavaScript` and saves `capturePage()` to a PNG. 16 checks — buttons, keyboard, error path, history, and the contents of `podaci.json`. Do not verify this app by screenshotting the desktop; drive it through `webContents`.
+`provera-ui.js` (`npm run test:ui`) — **16 checks** covering what `samoprovera.js` cannot: it `require`s the **real** `main.js` after pointing `userData` at a temp folder, drives the actual page with `webContents.executeJavaScript`, and saves `capturePage()` to a PNG. Do not verify this app by screenshotting the desktop; drive it through `webContents`.
 
-`provera-ui.js` and `napravi-ikonu.js` are dev-only and excluded from the installer by the `files` list in `package.json`. `provera-ui.js` is the one file here that uses `async`/`await` — it never ships, and the alternative is a promise pyramid.
+`provera-ui.js` and `napravi-ikonu.js` are dev-only and excluded from the installer by the `files` list in `package.json`. `provera-ui.js` is the one file here that uses `async`/`await` — it never ships.
 
-### Icon
+### Do not undo these
 
-`kalkulator.ico` is generated by `napravi-ikonu.js` (`npm run ikona`) — RGBA buffer, signed-distance rounded rectangles for antialiasing, PNG via Node's `zlib`, PNG entries packed into an ICO container, six sizes (256/128/64/48/32/16). No image library. If the icon needs changing, edit `nacrtaj()` and rerun rather than adding a dependency.
+- **Do not widen the preload bridge.** `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`; the renderer gets exactly four functions on `window.kalkulatorMost` and reaches the disk only through IPC (`kalk:istorija-ucitaj`, `-dodaj`, `-obrisi`, `kalk:gde-su-podaci`). That is the whole security model.
+- **Keep `renderer/racunanje.js` pure.** No DOM, no Electron, no `fs`. A UMD tail lets the same file load as a `<script>` in the renderer and as a `require()` in the test. The moment it touches the DOM, the test suite needs a browser.
+- **Implicit multiplication goes on the operator stack, not the output.** `2(3+1)` and `(1+1)2` insert a `*` via `ubaciOperator()`. Pushing `'*'` straight to `izlaz` produces `[2,'*',3,1,'+']` and blows up at evaluation — this was a real bug caught by the self-check.
+- **`skladiste.js` takes the file path as an argument** instead of calling `app.getPath()` itself. That is why the self-check can exercise it against a temp folder with no Electron running. Do not inline the path.
+- **Writes are atomic and corruption is survivable.** `.tmp` then rename over the real file; unparseable JSON is renamed to `podaci.json.osteceno` and the app starts empty rather than crashing or overwriting. History is capped at 200 records, newest first.
+- **A failed expression is shown in red and is not written to history.** An unfinished expression while typing is not an error at all — the preview line just goes blank.
+- Percent is postfix "divide by 100", always (`2+3%` → `2.03`). Windows Calculator's context-sensitive percent is deliberately not implemented — reasons in the spec.
+- `kalkulator.ico` comes from `napravi-ikonu.js`. If it needs changing, edit `nacrtaj()` and rerun rather than adding an image library.
 
 ## Language conventions
 
