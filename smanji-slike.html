@@ -54,7 +54,6 @@
 
   .bar .lbl { color: var(--muted); font-weight: 600; font-size: 12px; }
   .bar .sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 2px; }
-  .sidebar .bar .fld { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
   select, input[type=number] {
     font: inherit;
     font-size: 13px;
@@ -110,7 +109,8 @@
     overflow: hidden;
     margin-bottom: 12px;
   }
-  .prog > i { display: block; height: 100%; width: 72%; background: var(--accent); }
+  .prog > i { display: block; height: 100%; width: 0; background: var(--accent); }
+  .progInfo { color: var(--muted); font-size: 12px; margin: -6px 0 12px; }
 
   .card {
     background: var(--panel);
@@ -166,6 +166,10 @@
   }
   td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: 0; }
+  td.num { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; white-space: nowrap; }
+  .save { color: var(--ok); font-weight: 650; font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; }
+  .bad { color: var(--err); }
+  .fname { font-weight: 550; }
 
   .zipbar {
     display: flex;
@@ -194,6 +198,8 @@
   button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
   /* maketa nema opšte pravilo za onemogućeno dugme (samo inline primer za red sa greškom) — dodato ovde da dugme deluje sivo dok je disabled */
   button:disabled { opacity: .45; cursor: default; }
+  input:disabled { opacity: .45; }
+  .disabledFld { opacity: .45; }
 
   .drop.preko { border-color: var(--accent); background: var(--panel); }
   .thumb {
@@ -235,8 +241,8 @@
     <div class="fld">
       <span class="lbl">Režim</span>
       <button class="mode" data-rezim="stretch">Stretch</button>
-      <button class="mode" data-rezim="crop">Crop</button>
       <button class="mode" data-rezim="fit">Fit</button>
+      <button class="mode" data-rezim="crop">Crop</button>
     </div>
     <span class="sep"></span>
     <div class="fld">
@@ -265,6 +271,7 @@
   </div>
   <div class="drop" id="drop">Prevuci slike ovde ili <b>izaberi fajlove</b> &nbsp;·&nbsp; JPG, PNG, WEBP, GIF</div>
   <input type="file" id="fajlovi" multiple accept="image/*" hidden>
+  <div class="progInfo hidden" id="progInfo"></div>
   <div class="prog hidden" id="prog"><i></i></div>
   <div class="card"><div class="card-head"><span>Pregled</span><span id="pregledInfo"></span></div>
     <div class="canvas-wrap"><canvas id="cv"></canvas></div></div>
@@ -287,6 +294,18 @@
   };
   var state = {};
   for (var kljuc in DEFAULTS) state[kljuc] = DEFAULTS[kljuc];
+
+  // state.dpi ume da bude '' dok korisnik briše polje pre kucanja nove vrednosti
+  // (vidi #dpi oninput) — ovde se, samo za potrebe računa, prazno tretira kao 96,
+  // bez upisivanja te vrednosti nazad u state ili u polje.
+  function efektivnoStanje() {
+    var dpi = state.dpi;
+    if (dpi === '' || dpi === null || dpi === undefined || isNaN(dpi)) dpi = 96;
+    return {
+      jedinica: state.jedinica, w: state.w, h: state.h, dpi: dpi,
+      neUvecavaj: state.neUvecavaj
+    };
+  }
 
   // ---- čiste funkcije ----
 
@@ -337,12 +356,14 @@
     return (b / 1024 / 1024).toFixed(2) + ' MB';
   }
 
-  // Format koji je korisnik izabrao → MIME. „original" bira po tome da li ulaz nosi alfu.
-  function mimeZa(format, ulaznaAlfa) {
+  // Format koji je korisnik izabrao → MIME. „original" zadrži ulazni MIME kad ga
+  // canvas ume da enkoduje (jpeg/png/webp); za sve ostalo (GIF, BMP, nepoznato) → PNG.
+  function mimeZa(format, ulazniMime) {
     if (format === 'jpg') return 'image/jpeg';
     if (format === 'png') return 'image/png';
     if (format === 'webp') return 'image/webp';
-    return ulaznaAlfa ? 'image/png' : 'image/jpeg';
+    if (ulazniMime === 'image/jpeg' || ulazniMime === 'image/png' || ulazniMime === 'image/webp') return ulazniMime;
+    return 'image/png';
   }
 
   function alfaMoguca(mime) { return mime !== 'image/jpeg'; }
@@ -364,8 +385,8 @@
         izlaz.push(c);
       } else if (c < 0x800) {
         izlaz.push(0xC0 | (c >> 6), 0x80 | (c & 63));
-      } else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
-        c2 = s.charCodeAt(i + 1);
+      } else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length &&
+                 (c2 = s.charCodeAt(i + 1)) >= 0xDC00 && c2 <= 0xDFFF) {
         cp = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00);
         izlaz.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 63),
                    0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
@@ -475,7 +496,7 @@
     var alfa = /png|webp|gif/i.test(file.type);
 
     function gotovo(src, w, h) {
-      cb(null, { src: src, w: w, h: h, alfa: alfa, ime: file.name, bajta: file.size });
+      cb(null, { src: src, w: w, h: h, alfa: alfa, tip: file.type, ime: file.name, bajta: file.size });
     }
 
     if (window.createImageBitmap) {
@@ -548,8 +569,8 @@
 
   // Obradi jednu stavku do gotovog bloba.
   function obradiStavku(s, gotovo) {
-    var mime = mimeZa(state.format, s.alfa);
-    var d = racunajDimenzije(s.w, s.h, state);
+    var mime = mimeZa(state.format, s.tip);
+    var d = racunajDimenzije(s.w, s.h, efektivnoStanje());
     var c;
     try {
       c = nacrtaj(s.src, d.w, d.h, {
@@ -584,12 +605,20 @@
       var s = localStorage.getItem(KLJUC);
       if (!s) return;
       var o = JSON.parse(s);
-      for (var k in DEFAULTS) if (o.hasOwnProperty(k)) state[k] = o[k];
+      for (var k in DEFAULTS) {
+        if (!o.hasOwnProperty(k)) continue;
+        // „format" se prihvata samo ako postoji odgovarajuća <option> u #format —
+        // sprečava da sačuvano „webp" iz starije sesije preživi na browseru koji
+        // ga (još) ne podržava, i posle detekcije uklonio tu opciju iz DOM-a
+        if (k === 'format' && !$('format').querySelector('option[value="' + o[k] + '"]')) continue;
+        state[k] = o[k];
+      }
     } catch (e) {}
   }
 
-  // WEBP se nudi samo ako ga ovaj browser ume enkodovati
-  (function () {
+  // WEBP se nudi samo ako ga ovaj browser ume enkodovati. Mora da se pozove POSLE
+  // ucitaj() — inače ucitaj() prepiše ispravku sačuvanim (možda nepodržanim) format-om.
+  function detektujWebp() {
     var t = document.createElement('canvas');
     t.width = t.height = 1;
     if (t.toDataURL('image/webp').indexOf('data:image/webp') !== 0) {
@@ -598,7 +627,7 @@
       if (state.format === 'webp') state.format = 'jpg';
       DEFAULTS.format = 'jpg';
     }
-  })();
+  }
 
   var stavke = [];
   // Sledeći indeks čiji red treba iscrtati — čuva redosled ulaza i kad
@@ -746,7 +775,7 @@
       d(400, 400, { jedinica: 'pixels', w: 800, h: 600, dpi: 96, neUvecavaj: true }),
       { w: 400, h: 300 });
 
-    proveri('neUvecavaj ograničava i kad je samo jedna osa preveliká',
+    proveri('neUvecavaj ograničava i kad je samo jedna osa prevelika',
       d(1000, 1000, { jedinica: 'pixels', w: 500, h: 2000, dpi: 96, neUvecavaj: true }),
       { w: 250, h: 1000 });
 
@@ -759,11 +788,12 @@
     proveri('kb: megabajti', kb(3 * 1024 * 1024), '3.00 MB');
     proveri('kb: nepoznato', kb(null), '—');
 
-    proveri('mimeZa: jpg', mimeZa('jpg', false), 'image/jpeg');
-    proveri('mimeZa: png', mimeZa('png', false), 'image/png');
-    proveri('mimeZa: webp', mimeZa('webp', true), 'image/webp');
-    proveri('mimeZa: original bez alfe → jpeg', mimeZa('original', false), 'image/jpeg');
-    proveri('mimeZa: original sa alfom → png', mimeZa('original', true), 'image/png');
+    proveri('mimeZa: jpg uvek jpeg', mimeZa('jpg', 'image/png'), 'image/jpeg');
+    proveri('mimeZa: png uvek png', mimeZa('png', 'image/jpeg'), 'image/png');
+    proveri('mimeZa: webp uvek webp', mimeZa('webp', 'image/jpeg'), 'image/webp');
+    proveri('mimeZa: original PNG ulaz ostaje PNG', mimeZa('original', 'image/png'), 'image/png');
+    proveri('mimeZa: original nepoznat MIME → png', mimeZa('original', 'image/gif'), 'image/png');
+    proveri('mimeZa: original WEBP ulaz ostaje WEBP', mimeZa('original', 'image/webp'), 'image/webp');
 
     proveri('alfaMoguca: jpeg ne', alfaMoguca('image/jpeg'), false);
     proveri('alfaMoguca: png da', alfaMoguca('image/png'), true);
@@ -810,6 +840,8 @@
     proveri('uUtf8: š', Array.prototype.slice.call(uUtf8('š')), [0xC5, 0xA1]);
     proveri('uUtf8: emodži izvan BMP',
       Array.prototype.slice.call(uUtf8('😀')), [0xF0, 0x9F, 0x98, 0x80]);
+    proveri('uUtf8: usamljeni visoki surogat čuva sledeći znak',
+      Array.prototype.slice.call(uUtf8('\uD800A')), [0xED, 0xA0, 0x80, 0x41]);
 
     // standardni kontrolni vektor za CRC-32
     proveri('crc32 kontrolni vektor', crc32(uUtf8('123456789')), 0xCBF43926);
@@ -847,16 +879,22 @@
     }
     if (!s) { $('pregledInfo').textContent = ''; return; }
 
-    var mime = mimeZa(state.format, s.alfa);
-    var d = racunajDimenzije(s.w, s.h, state);
-    var izlaz = nacrtaj(s.src, d.w, d.h, {
-      rezim: state.rezim, boja: state.boja,
-      providno: state.providno, alfaMoguca: alfaMoguca(mime)
-    });
-    var cv = $('cv');
-    cv.width = izlaz.width; cv.height = izlaz.height;
-    cv.getContext('2d').drawImage(izlaz, 0, 0);
-    $('pregledInfo').textContent = d.w + ' × ' + d.h + ' px · ' + nastavak(mime).toUpperCase();
+    var mime = mimeZa(state.format, s.tip);
+    var d = racunajDimenzije(s.w, s.h, efektivnoStanje());
+    try {
+      var izlaz = nacrtaj(s.src, d.w, d.h, {
+        rezim: state.rezim, boja: state.boja,
+        providno: state.providno, alfaMoguca: alfaMoguca(mime)
+      });
+      var cv = $('cv');
+      cv.width = izlaz.width; cv.height = izlaz.height;
+      cv.getContext('2d').drawImage(izlaz, 0, 0);
+      $('pregledInfo').textContent = d.w + ' × ' + d.h + ' px · ' + nastavak(mime).toUpperCase();
+    } catch (e) {
+      // nacrtaj baca kad getContext('2d') vrati null (canvas preko limita browsera) —
+      // izuzetak ovde ne sme da izleti iz osvezi() i spreči zakazivanje batcha/snimanje
+      $('pregledInfo').textContent = 'Slika je prevelika za ovaj browser';
+    }
   }
 
   // Upiši state u kontrole trake i uskladi vidljivost/aktivno dugme.
@@ -873,8 +911,11 @@
     $('neUvecavaj').checked = state.neUvecavaj;
 
     $('dpiFld').classList.toggle('hidden', state.jedinica !== 'cm' && state.jedinica !== 'inch');
-    $('kvalFld').classList.toggle('hidden', state.format === 'png');
-    $('provFld').classList.toggle('hidden', mimeZa(state.format, true) === 'image/jpeg');
+    // Quality se za PNG ne krije (raspored trake ostaje isti) — samo se onemogući i zasivi.
+    var pngKval = state.format === 'png';
+    $('kvalFld').classList.toggle('disabledFld', pngKval);
+    $('quality').disabled = pngKval;
+    $('provFld').classList.toggle('hidden', mimeZa(state.format, 'image/png') === 'image/jpeg');
 
     var dugmad = document.querySelectorAll('.mode');
     for (var i = 0; i < dugmad.length; i++) {
@@ -893,6 +934,8 @@
 
     var i = 0, ukupnoOrig = 0, ukupnoNovo = 0;
     $('prog').classList.remove('hidden');
+    $('progInfo').classList.remove('hidden');
+    $('prog').firstChild.style.width = '0%';         // reset na početku svakog prolaza
 
     function dalje() {
       if (moj !== zahtev) {            // podešavanja su se promenila u međuvremenu
@@ -903,9 +946,11 @@
       if (i >= stavke.length) {
         uToku = false;
         $('prog').classList.add('hidden');
+        $('progInfo').classList.add('hidden');
+        var uOdst = ukupnoOrig ? Math.round((1 - ukupnoNovo / ukupnoOrig) * 100) : 0;
         $('zbir').textContent = brojDobrih() + ' slika · ' + kb(ukupnoOrig) +
           ' → ' + kb(ukupnoNovo) +
-          (ukupnoOrig ? '  (−' + Math.round((1 - ukupnoNovo / ukupnoOrig) * 100) + '%)' : '');
+          (ukupnoOrig ? '  (' + (uOdst >= 0 ? '−' : '+') + Math.abs(uOdst) + '%)' : '');
         $('zip').disabled = brojDobrih() === 0;
         return;
       }
@@ -917,6 +962,7 @@
       if (!s) { setTimeout(dalje, 0); return; }
 
       $('prog').firstChild.style.width = Math.round(i / stavke.length * 100) + '%';
+      $('progInfo').textContent = i + '/' + stavke.length;
 
       // samo trajne greške (dekodovanje) preskaču zauvek; greška iz obrade
       // zavisi od podešavanja, pa se stavka mora pokušati ponovo
@@ -1043,10 +1089,13 @@
     });
   };
 
-  $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); renderIzgled(); osvezi(); };
-  $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); renderIzgled(); osvezi(); };
+  // #w/#h/#dpi namerno NE zovu renderIzgled() — to bi upisalo state nazad u polje
+  // koje korisnik trenutno kuca (npr. prazno → 96 → renderIzgled ispisuje "96" preko
+  // onoga što korisnik tek kuca). osvezi() svejedno vidi promenu preko state-a.
+  $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); osvezi(); };
+  $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); osvezi(); };
   $('jedinica').onchange = function () { state.jedinica = this.value; renderIzgled(); osvezi(); };
-  $('dpi').oninput = function () { state.dpi = Number(this.value) || 96; renderIzgled(); osvezi(); };
+  $('dpi').oninput = function () { state.dpi = this.value === '' ? '' : Number(this.value); osvezi(); };
   $('format').onchange = function () { state.format = this.value; renderIzgled(); osvezi(); };
   $('quality').oninput = function () { state.quality = Number(this.value); renderIzgled(); osvezi(); };
   $('boja').oninput = function () { state.boja = this.value; renderIzgled(); osvezi(); };
@@ -1059,6 +1108,7 @@
   })(modeDugmad[mi]);
 
   ucitaj();
+  detektujWebp();
   renderIzgled();
   trenutniPregled();
 })();
