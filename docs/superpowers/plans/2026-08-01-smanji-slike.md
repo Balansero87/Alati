@@ -225,7 +225,7 @@ U `samoprovera()`, umesto tvrdnje iz Zadatka 1:
 
     proveri('neUvecavaj čuva odnos zadatog okvira',
       d(400, 400, { jedinica: 'pixels', w: 800, h: 600, dpi: 96, neUvecavaj: true }),
-      { w: 533, h: 400 });
+      { w: 400, h: 300 });
 
     proveri('nula i negativno se tretiraju kao prazno',
       d(1500, 1000, { jedinica: 'pixels', w: 0, h: -5, dpi: 96, neUvecavaj: false }),
@@ -325,7 +325,7 @@ Dodaj u `samoprovera()`:
 
 - [ ] **Korak 2: Pokreni i potvrdi da padaju**
 
-Osveži `#test`. Očekivano: `12/16 prošlo`, četiri nova reda `PAO`.
+Osveži `#test`. Očekivano: `13/17 prošlo`, četiri nova reda `PAO`.
 
 - [ ] **Korak 3: Napiši kb() i ucitajSliku()**
 
@@ -617,7 +617,7 @@ U blok „slike":
 
 - [ ] **Korak 4: Pokreni testove**
 
-Osveži `#test`. Očekivano: `25/25 prošlo`.
+Osveži `#test`. Očekivano: `26/26 prošlo`.
 
 Ako `crop: nema traka pozadine` padne sa zelenom bojom, `Math.max` i `Math.min` su zamenjeni mestima.
 
@@ -696,7 +696,7 @@ git add smanji-slike.html && git commit -m "feat: nacrtaj sa stretch/fit/crop i 
 
 - [ ] **Korak 2: Pokreni i potvrdi da padaju**
 
-Osveži `#test`. Očekivano: `25/37 prošlo`.
+Osveži `#test`. Očekivano: `26/38 prošlo`.
 
 - [ ] **Korak 3: Napiši implementaciju**
 
@@ -738,7 +738,7 @@ U blok „slike":
 
 - [ ] **Korak 4: Pokreni testove**
 
-Osveži `#test`. Očekivano: `37/37 prošlo`.
+Osveži `#test`. Očekivano: `38/38 prošlo`.
 
 - [ ] **Korak 5: Dodaj kontrole formata i quality-ja**
 
@@ -845,7 +845,7 @@ Ubaci nekoliko slika, pa:
 - Klikni „Preuzmi" u jednom redu — fajl stiže sa tačnim nastavkom i otvara se ispravno.
 - Providna PNG → format JPG: providnost postaje izabrana boja, ne crna. Nazad na PNG uz čekiran „providno": providnost očuvana (proveri u pregledaču slika sa šahovnicom).
 
-Osveži `#test` — `37/37`.
+Osveži `#test` — `38/38`.
 
 - [ ] **Korak 8: Commit**
 
@@ -889,7 +889,7 @@ git add smanji-slike.html && git commit -m "feat: format, quality i pojedinacno 
 
 - [ ] **Korak 2: Pokreni i potvrdi da padaju**
 
-Osveži `#test`. Očekivano: `37/46 prošlo`.
+Osveži `#test`. Očekivano: `38/47 prošlo`.
 
 - [ ] **Korak 3: Napiši uUtf8 i crc32**
 
@@ -1012,7 +1012,7 @@ Osveži `#test`. Očekivano: `37/46 prošlo`.
 
 - [ ] **Korak 5: Pokreni testove**
 
-Osveži `#test`. Očekivano: `46/46 prošlo`.
+Osveži `#test`. Očekivano: `47/47 prošlo`.
 
 Ako `zip: tačna veličina` padne, uporedi sa računicom u komentaru tvrdnje — najčešći uzrok je zaboravljen `true` (little-endian) u nekom `setUint*` pozivu.
 
@@ -1115,7 +1115,10 @@ git add smanji-slike.html && git commit -m "feat: rucni ZIP writer bez zavisnost
       var s = stavke[i++];
       $('prog').firstChild.style.width = Math.round(i / stavke.length * 100) + '%';
 
-      if (s.greska) { osveziRed(s); dalje(); return; }
+      // samo trajne greške (dekodovanje) preskaču zauvek; greška iz obrade
+      // zavisi od podešavanja, pa se stavka mora pokušati ponovo
+      if (s.trajnaGreska) { osveziRed(s); dalje(); return; }
+      s.greska = null;
 
       obradiStavku(s, function (greska) {
         if (greska) { s.greska = greska; }
@@ -1250,7 +1253,7 @@ Zatim isključi internet i ponovi ceo tok. Očekivano: sve radi isto.
 
 - [ ] **Korak 5: Potvrdi da samoprovera i dalje prolazi**
 
-Osveži `smanji-slike.html#test`. Očekivano: `46/46 prošlo`.
+Osveži `smanji-slike.html#test`. Očekivano: `47/47 prošlo`.
 
 - [ ] **Korak 6: Proveri veličinu i stil fajla**
 
@@ -1306,4 +1309,9 @@ Bez rupa.
 
 **Doslednost imena kroz zadatke:** `racunajDimenzije`, `nacrtaj`, `uKodiraj`, `mimeZa`, `alfaMoguca`, `nastavak`, `preimenuj`, `kb`, `uUtf8`, `crc32`, `napraviZip`, `ucitajSliku`, `obradiStavku`, `obradiSve`, `osveziRed`, `renderRed`, `preuzmi`, `osvezi`, `sacuvaj`, `ucitaj` — svako se uvodi u tačno jednom zadatku i posle se koristi pod istim imenom. `state`, `DEFAULTS`, `stavke` su jedini deljeni podaci.
 
-**Broj tvrdnji po zadacima:** 1 (Z1) → 12 (Z2) → 16 (Z3) → 25 (Z4) → 37 (Z5) → 46 (Z6). Brojevi u koracima „Očekivano" prate ovaj zbir.
+**Broj tvrdnji po zadacima:** 1 (Z1) → 13 (Z2) → 17 (Z3) → 26 (Z4) → 38 (Z5) → 47 (Z6). Brojevi u koracima „Očekivano" prate ovaj zbir.
+
+**Ispravke tokom izvršavanja:** Z2 je dobio 13. tvrdnju (kontraprimer za
+`neUvecavaj`), pa su svi kasniji zbirovi pomereni za jedan. Pomoćna funkcija
+`$(id)` je u tabeli „Struktura fajla" navedena u bloku „podaci", ali je nijedan
+korak Z1 nije nalagao — dodata je u Z3, gde je prvi put stvarno potrebna.
