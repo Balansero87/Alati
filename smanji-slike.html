@@ -599,8 +599,11 @@
 
     for (i = 0; i < n; i++) (function (f, idx) {
       ucitajSliku(f, function (greska, p) {
+        // trajnaGreska: dekodovanje palo — fajl nikad neće postati slika,
+        // ponovni pokušaj obrade nema smisla (za razliku od greske iz
+        // obradiStavku, koja zavisi od podešavanja i može se popraviti)
         var s = greska
-          ? { ime: f.name, bajta: f.size, greska: greska }
+          ? { ime: f.name, bajta: f.size, greska: greska, trajnaGreska: greska }
           : p;
         stavke[idx] = s;
         $('brojInfo').textContent = stavke.length + ' fajlova';
@@ -899,7 +902,10 @@
 
       $('prog').firstChild.style.width = Math.round(i / stavke.length * 100) + '%';
 
-      if (s.greska) { osveziRed(s); dalje(); return; }
+      // samo trajne greške (dekodovanje) preskaču zauvek; greška iz obrade
+      // zavisi od podešavanja, pa se stavka mora pokušati ponovo
+      if (s.trajnaGreska) { osveziRed(s); dalje(); return; }
+      s.greska = null;
 
       obradiStavku(s, function (greska) {
         // stavka je mogla ranije uspešno da se obradi (drugi prolaz, izmenjena
