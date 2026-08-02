@@ -25,6 +25,24 @@ The two tools share nothing — no code, no assets, no conventions beyond style.
 
 This **is** a git repository (branch `main`). Commit when the user asks.
 
+## Adding a new tool (required convention)
+
+Every tool gets its own folder. **Never add tool files to the repository root** — the root holds only `README.md`, `CLAUDE.md`, and dotfiles. This is a standing instruction from the user, not a suggestion.
+
+When building a new tool:
+
+1. **Create `<ime-alata>/` at the root**, kebab-case, Serbian name. The main file is named after the folder: `<ime-alata>/<ime-alata>.html`. Everything belonging to that tool — icons, PWA wrapper, assets — goes inside that folder and nowhere else.
+2. **Follow the house style**: single self-contained HTML, inline CSS, one IIFE, ES5 (`var`, function declarations), zero dependencies, no build step. UI strings and code comments in Serbian (Latin script).
+3. **Add a built-in self-check** if the tool has pure functions worth testing — same pattern as `smanji-slike`: a `proveri(naziv, dobio, ocekivano)` helper, a `samoprovera()` runner behind `#test`, and `window.samoprovera` exposed for the console. No framework, no dependency.
+4. **Write the spec to `docs/specifikacije/`** and the implementation plan to `docs/planovi/`, both dated `YYYY-MM-DD-<ime-alata>-*`.
+5. **Update `README.md`** — this is the step that is easiest to skip and the one the user explicitly asked for:
+   - a section for the tool: what it does, its path, and **whether it needs internet**
+   - a row in the „Šta je gde" table
+   - if it launches from a desktop shortcut, say so
+6. **If it should launch like a normal program**, generate an `.ico` in the tool's folder and create a desktop shortcut running `chrome.exe --app=file:///...`. The shortcut hard-codes an absolute path — recreate it if the file ever moves.
+
+Do not reorganise or rename an existing tool's folder while adding a new one.
+
 ## Prevodilac SR ⇄ DE
 
 **`prevodilac/prevodilac.html` and `prevodilac/web/index.html` are byte-identical copies.** There is no build that generates one from the other. Any edit must be written to both, and they must stay identical:
