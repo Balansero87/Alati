@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smanji slike</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --border: #dfe1e6;
+    --text: #1b1f23;
+    --muted: #6b7280;
+    --accent: hsl(222 85% 56%);
+    --accent-hover: hsl(222 70% 46%);
+    --ok: #16a34a;
+    --err: #d92d20;
+    --warn: #b45309;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --panel: #1c1f25;
+      --border: #2c313a;
+      --text: #e8eaed;
+      --muted: #9aa1ac;
+      --accent: hsl(222 100% 68%);
+      --accent-hover: hsl(222 100% 76%);
+      --ok: #4ade80;
+      --err: #ff7b72;
+      --warn: #f0b429;
+      --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 20px 16px 40px;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  header { margin-bottom: 14px; }
+  h1 { font-size: 20px; margin: 0 0 4px; font-weight: 650; }
+  .sub { color: var(--muted); font-size: 13px; }
+
+  /* ---------- ostalo preuzeto iz makete (docs/superpowers/specs/2026-08-01-smanji-slike-playground.html), bez .app prefiksa ---------- */
+
+  .hidden { display: none !important; }
+
+  .bar .lbl { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .bar .sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 2px; }
+  select, input[type=number] {
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 7px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  input[type=number] { width: 66px; }
+  input[type=range] { accent-color: var(--accent); width: 108px; vertical-align: middle; }
+  input[type=color] {
+    width: 30px; height: 26px; padding: 0;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); cursor: pointer;
+  }
+  .mode { min-width: 62px; }
+  .mode.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .chk input { accent-color: var(--accent); }
+
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+
+  .drop {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    background: var(--panel);
+    margin-bottom: 14px;
+  }
+  .drop b { color: var(--accent); font-weight: 600; }
+
+  .prog {
+    height: 4px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .prog > i { display: block; height: 100%; width: 0; background: var(--accent); }
+  .progInfo { color: var(--muted); font-size: 12px; margin: -6px 0 12px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .card-head {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .canvas-wrap {
+    padding: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 240px;
+    background-color: var(--panel);
+    background-image:
+      linear-gradient(45deg, rgba(128,128,128,.16) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(128,128,128,.16) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(128,128,128,.16) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.16) 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+  .canvas-wrap canvas {
+    max-width: 100%;
+    max-height: 320px;
+    display: block;
+    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th {
+    text-align: left;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    font-weight: 700;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  td.num { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; white-space: nowrap; }
+  .save { color: var(--ok); font-weight: 650; font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; }
+  .bad { color: var(--err); }
+  .fname { font-weight: 550; }
+
+  .zipbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+  /* maketa nema opšte pravilo za onemogućeno dugme (samo inline primer za red sa greškom) — dodato ovde da dugme deluje sivo dok je disabled */
+  button:disabled { opacity: .45; cursor: default; }
+  input:disabled { opacity: .45; }
+  .disabledFld { opacity: .45; }
+
+  .drop.preko { border-color: var(--accent); background: var(--panel); }
+  .thumb {
+    width: 34px; height: 34px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+    border: 1px solid var(--border);
+  }
+  .thumb.sivo { display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .mono { font-family: ui-monospace, Consolas, monospace; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Smanji slike</h1>
+    <p class="sub">Sve ostaje na tvom uređaju. Bez uploada, bez naloga, bez ograničenja.</p>
+  </header>
+
+  <div class="bar" id="traka">
+    <div class="fld">
+      <span class="lbl">Dimenzije</span>
+      <input type="number" id="w" placeholder="W" min="1">
+      <span class="lbl">×</span>
+      <input type="number" id="h" placeholder="H" min="1">
+      <select id="jedinica">
+        <option value="percent">percent</option>
+        <option value="pixels">pixels</option>
+        <option value="cm">centimeters</option>
+        <option value="inch">inches</option>
+      </select>
+    </div>
+    <div class="fld hidden" id="dpiFld">
+      <span class="lbl">DPI</span><input type="number" id="dpi" min="1">
+    </div>
+    <span class="sep"></span>
+    <div class="fld">
+      <span class="lbl">Režim</span>
+      <button class="mode" data-rezim="stretch">Stretch</button>
+      <button class="mode" data-rezim="fit">Fit</button>
+      <button class="mode" data-rezim="crop">Crop</button>
+    </div>
+    <span class="sep"></span>
+    <div class="fld">
+      <span class="lbl">Format</span>
+      <select id="format">
+        <option value="original">Original</option>
+        <option value="jpg">JPG</option>
+        <option value="png">PNG</option>
+        <option value="webp">WEBP</option>
+      </select>
+    </div>
+    <div class="fld" id="kvalFld">
+      <span class="lbl">Quality</span>
+      <input type="range" id="quality" min="1" max="100">
+      <span class="lbl mono" id="qualityVal"></span>
+    </div>
+    <span class="sep"></span>
+    <div class="fld">
+      <span class="lbl">Pozadina</span>
+      <input type="color" id="boja">
+      <label class="chk" id="provFld"><input type="checkbox" id="providno"> providno</label>
+    </div>
+    <div class="fld">
+      <label class="chk"><input type="checkbox" id="neUvecavaj"> ne uvećavaj</label>
+    </div>
+  </div>
+  <div class="drop" id="drop">Prevuci slike ovde ili <b>izaberi fajlove</b> &nbsp;·&nbsp; JPG, PNG, WEBP, GIF</div>
+  <input type="file" id="fajlovi" multiple accept="image/*" hidden>
+  <div class="progInfo hidden" id="progInfo"></div>
+  <div class="prog hidden" id="prog"><i></i></div>
+  <div class="card"><div class="card-head"><span>Pregled</span><span id="pregledInfo"></span></div>
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div></div>
+  <div class="card"><div class="card-head"><span>Rezultati</span><span id="brojInfo"></span></div>
+    <table><thead><tr><th></th><th>Fajl</th><th>Original</th><th>Novo</th><th>Ušteda</th><th></th></tr></thead>
+    <tbody id="redovi"></tbody></table></div>
+  <div class="zipbar"><span id="zbir"></span><button class="primary" id="zip" disabled>Preuzmi sve (ZIP)</button></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- podaci ----
+
+  var DEFAULTS = {
+    jedinica: 'pixels', w: 1600, h: '', dpi: 96,
+    rezim: 'fit', format: 'webp', quality: 82,
+    boja: '#ffffff', providno: false, neUvecavaj: true
+  };
+  var state = {};
+  for (var kljuc in DEFAULTS) state[kljuc] = DEFAULTS[kljuc];
+
+  // state.dpi ume da bude '' dok korisnik briše polje pre kucanja nove vrednosti
+  // (vidi #dpi oninput) — ovde se, samo za potrebe računa, svaka vrednost koja
+  // nije pozitivan broj (prazno, 0, negativno, NaN) tretira kao 96, bez upisivanja
+  // te vrednosti nazad u state ili u polje.
+  function efektivnoStanje() {
+    var dpi = state.dpi;
+    if (!(dpi > 0)) dpi = 96;
+    return {
+      jedinica: state.jedinica, w: state.w, h: state.h, dpi: dpi,
+      neUvecavaj: state.neUvecavaj
+    };
+  }
+
+  // ---- čiste funkcije ----
+
+  // Ciljne dimenzije iz unosa. Čista funkcija — ne dira DOM ni state.
+  // pw, ph = prirodne dimenzije slike. p = {jedinica, w, h, dpi, neUvecavaj}
+  function racunajDimenzije(pw, ph, p) {
+    // prazno, nula i negativno znače „nije zadato"
+    var W = p.w === '' || p.w === null || p.w === undefined ? null : Number(p.w);
+    var H = p.h === '' || p.h === null || p.h === undefined ? null : Number(p.h);
+    if (W !== null && !(W > 0)) W = null;
+    if (H !== null && !(H > 0)) H = null;
+
+    function uPiksele(v) {
+      if (p.jedinica === 'pixels') return v;
+      if (p.jedinica === 'cm') return v / 2.54 * p.dpi;
+      if (p.jedinica === 'inch') return v * p.dpi;
+      return v;
+    }
+
+    var w = null, h = null;
+    if (p.jedinica === 'percent') {
+      if (W !== null) w = pw * W / 100;
+      if (H !== null) h = ph * H / 100;
+    } else {
+      if (W !== null) w = uPiksele(W);
+      if (H !== null) h = uPiksele(H);
+    }
+
+    if (w === null && h === null) { w = pw; h = ph; }   // oba prazna → original
+    else if (w === null) w = h * pw / ph;               // izvedi iz odnosa
+    else if (h === null) h = w * ph / pw;
+
+    // ne uvećavaj: skaliraj ciljni okvir naniže dok ne stane u original,
+    // uz očuvan odnos zadatog okvira
+    if (p.neUvecavaj) {
+      var f = Math.min(1, pw / w, ph / h);
+      w *= f; h *= f;
+    }
+
+    return { w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)) };
+  }
+
+  // Ljudski čitljiva veličina fajla.
+  function kb(b) {
+    if (b === null || b === undefined) return '—';
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+    return (b / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
+  // Format koji je korisnik izabrao → MIME. „original" zadrži ulazni MIME kad ga
+  // canvas ume da enkoduje (jpeg/png/webp); za sve ostalo (GIF, BMP, nepoznato) → PNG.
+  function mimeZa(format, ulazniMime) {
+    if (format === 'jpg') return 'image/jpeg';
+    if (format === 'png') return 'image/png';
+    if (format === 'webp') return 'image/webp';
+    if (ulazniMime === 'image/jpeg' || ulazniMime === 'image/png' || ulazniMime === 'image/webp') return ulazniMime;
+    return 'image/png';
+  }
+
+  function alfaMoguca(mime) { return mime !== 'image/jpeg'; }
+
+  function nastavak(mime) {
+    return mime === 'image/jpeg' ? 'jpg' : mime === 'image/png' ? 'png' : 'webp';
+  }
+
+  function preimenuj(ime, mime) {
+    return ime.replace(/\.[^.\\/]*$/, '') + '.' + nastavak(mime);
+  }
+
+  // Ručni UTF-8 enkoder — TextEncoder ne postoji na starijim mobilnim browserima.
+  function uUtf8(s) {
+    var izlaz = [], i, c, c2, cp;
+    for (i = 0; i < s.length; i++) {
+      c = s.charCodeAt(i);
+      if (c < 0x80) {
+        izlaz.push(c);
+      } else if (c < 0x800) {
+        izlaz.push(0xC0 | (c >> 6), 0x80 | (c & 63));
+      } else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length &&
+                 (c2 = s.charCodeAt(i + 1)) >= 0xDC00 && c2 <= 0xDFFF) {
+        cp = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00);
+        izlaz.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 63),
+                   0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+        i++;
+      } else {
+        izlaz.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      }
+    }
+    return new Uint8Array(izlaz);
+  }
+
+  // CRC-32 (IEEE), sa tabelom koja se pravi pri prvom pozivu.
+  function crc32(u8) {
+    var t = crc32.tabela, n, k, c, i;
+    if (!t) {
+      t = crc32.tabela = new Int32Array(256);
+      for (n = 0; n < 256; n++) {
+        c = n;
+        for (k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        t[n] = c;
+      }
+    }
+    var crc = -1;
+    for (i = 0; i < u8.length; i++) crc = (crc >>> 8) ^ t[(crc ^ u8[i]) & 0xFF];
+    return (crc ^ -1) >>> 0;
+  }
+
+  // ZIP bez kompresije (metoda 0). Slike su već kompresovane, pa deflate
+  // ne bi doneo ništa osim mnogo koda.
+  function napraviZip(unosi) {
+    var lokalni = [], centralni = [], offset = 0, i;
+    var sada = new Date();
+    var vreme = ((sada.getHours() << 11) | (sada.getMinutes() << 5) |
+                 (sada.getSeconds() >> 1)) & 0xFFFF;
+    var datum = (((sada.getFullYear() - 1980) << 9) | ((sada.getMonth() + 1) << 5) |
+                 sada.getDate()) & 0xFFFF;
+
+    for (i = 0; i < unosi.length; i++) {
+      var ime = uUtf8(unosi[i].ime);
+      var pod = unosi[i].bajtovi;
+      var crc = crc32(pod);
+
+      var lh = new Uint8Array(30 + ime.length);
+      var lv = new DataView(lh.buffer);
+      lv.setUint32(0, 0x04034b50, true);   // potpis
+      lv.setUint16(4, 20, true);           // potrebna verzija
+      lv.setUint16(6, 0x0800, true);       // bit 11: ime je UTF-8
+      lv.setUint16(8, 0, true);            // metoda 0 = store
+      lv.setUint16(10, vreme, true);
+      lv.setUint16(12, datum, true);
+      lv.setUint32(14, crc, true);
+      lv.setUint32(18, pod.length, true);  // kompresovana veličina
+      lv.setUint32(22, pod.length, true);  // stvarna veličina
+      lv.setUint16(26, ime.length, true);
+      lv.setUint16(28, 0, true);           // bez extra polja
+      lh.set(ime, 30);
+      lokalni.push(lh, pod);
+
+      var ch = new Uint8Array(46 + ime.length);
+      var cv = new DataView(ch.buffer);
+      cv.setUint32(0, 0x02014b50, true);
+      cv.setUint16(4, 20, true);           // verzija kojom je napravljen
+      cv.setUint16(6, 20, true);           // potrebna verzija
+      cv.setUint16(8, 0x0800, true);
+      cv.setUint16(10, 0, true);
+      cv.setUint16(12, vreme, true);
+      cv.setUint16(14, datum, true);
+      cv.setUint32(16, crc, true);
+      cv.setUint32(20, pod.length, true);
+      cv.setUint32(24, pod.length, true);
+      cv.setUint16(28, ime.length, true);
+      cv.setUint16(30, 0, true);           // extra
+      cv.setUint16(32, 0, true);           // komentar
+      cv.setUint16(34, 0, true);           // broj diska
+      cv.setUint16(36, 0, true);           // interni atributi
+      cv.setUint32(38, 0, true);           // eksterni atributi
+      cv.setUint32(42, offset, true);      // pomeraj lokalnog headera
+      ch.set(ime, 46);
+      centralni.push(ch);
+
+      offset += lh.length + pod.length;
+    }
+
+    var cdVel = 0;
+    for (i = 0; i < centralni.length; i++) cdVel += centralni[i].length;
+
+    var eocd = new Uint8Array(22);
+    var ev = new DataView(eocd.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(4, 0, true);              // broj ovog diska
+    ev.setUint16(6, 0, true);              // disk sa početkom centralnog direktorijuma
+    ev.setUint16(8, unosi.length, true);
+    ev.setUint16(10, unosi.length, true);
+    ev.setUint32(12, cdVel, true);
+    ev.setUint32(16, offset, true);
+    ev.setUint16(20, 0, true);             // bez komentara
+
+    return new Blob(lokalni.concat(centralni, [eocd]), { type: 'application/zip' });
+  }
+
+  // ---- slike ----
+
+  // Dekodiraj fajl u nešto što canvas ume da nacrta.
+  // Moderni put je createImageBitmap; stariji browseri idu preko <img>.
+  function ucitajSliku(file, cb) {
+    if (!/^image\//.test(file.type)) { cb('Nije podržana slika', null); return; }
+    var alfa = /png|webp|gif/i.test(file.type);
+
+    function gotovo(src, w, h) {
+      cb(null, { src: src, w: w, h: h, alfa: alfa, tip: file.type, ime: file.name, bajta: file.size });
+    }
+
+    if (window.createImageBitmap) {
+      createImageBitmap(file).then(function (bm) {
+        gotovo(bm, bm.width, bm.height);
+      }, function () { preko_img(); });
+    } else {
+      preko_img();
+    }
+
+    function preko_img() {
+      var url = URL.createObjectURL(file);
+      var im = new Image();
+      im.onload = function () {
+        URL.revokeObjectURL(url);
+        if (!im.naturalWidth) { cb('Nije podržana slika', null); return; }
+        gotovo(im, im.naturalWidth, im.naturalHeight);
+      };
+      im.onerror = function () {
+        URL.revokeObjectURL(url);
+        cb('Nije podržana slika', null);
+      };
+      im.src = url;
+    }
+  }
+
+  // Iscrtaj sliku na canvas tačnih dimenzija w×h prema režimu.
+  // p = {rezim, boja, providno, alfaMoguca}
+  function nacrtaj(src, w, h, p) {
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var x = c.getContext('2d');
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = 'high';
+
+    // pozadina se crta uvek osim kad korisnik traži providnost i format je ume
+    if (!(p.providno && p.alfaMoguca)) {
+      x.fillStyle = p.boja;
+      x.fillRect(0, 0, w, h);
+    }
+
+    var sw = src.width || src.naturalWidth;
+    var sh = src.height || src.naturalHeight;
+    var sc, dw, dh;
+
+    if (p.rezim === 'stretch') {
+      x.drawImage(src, 0, 0, w, h);            // odnos stranica se ignoriše
+    } else {
+      // fit staje unutra, crop pokriva i višak ispada van canvasa
+      sc = p.rezim === 'fit' ? Math.min(w / sw, h / sh) : Math.max(w / sw, h / sh);
+      dw = sw * sc; dh = sh * sc;
+      x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    }
+    return c;
+  }
+
+  // toBlob je asinhron i ume da vrati null kad ostane bez memorije.
+  function uKodiraj(c, mime, quality, cb) {
+    try {
+      c.toBlob(function (b) {
+        if (!b) { cb('Neuspešno kodiranje', null); return; }
+        cb(null, b);
+      }, mime, quality / 100);
+    } catch (e) {
+      cb('Neuspešno kodiranje', null);
+    }
+  }
+
+  // ---- obrada ----
+
+  // Obradi jednu stavku do gotovog bloba.
+  function obradiStavku(s, gotovo) {
+    var mime = mimeZa(state.format, s.tip);
+    var d = racunajDimenzije(s.w, s.h, efektivnoStanje());
+    var c;
+    try {
+      c = nacrtaj(s.src, d.w, d.h, {
+        rezim: state.rezim, boja: state.boja,
+        providno: state.providno, alfaMoguca: alfaMoguca(mime)
+      });
+    } catch (e) {
+      gotovo('Slika je prevelika za ovaj browser');
+      return;
+    }
+    uKodiraj(c, mime, state.quality, function (greska, blob) {
+      if (greska) { gotovo(greska); return; }
+      s.blob = blob; s.novaW = d.w; s.novaH = d.h; s.noviMime = mime;
+      gotovo(null);
+    });
+  }
+
+  // ---- UI ----
+
+  // Pomoćna: element po id-ju (nedostajala je iz Zadatka 1, dodata ovde jer je neophodna).
+  function $(id) { return document.getElementById(id); }
+
+  var KLJUC = 'smanjiSlike.v1';
+
+  // localStorage baca izuzetak u privatnom režimu — isti obrazac kao u prevodiocu.
+  function sacuvaj() {
+    try { localStorage.setItem(KLJUC, JSON.stringify(state)); } catch (e) {}
+  }
+
+  // Direktno poređenje po .value umesto CSS selektora građenog od nepouzdane
+  // vrednosti — querySelector('[value="' + v + '"]') baca SyntaxError čim v
+  // sadrži navodnik, što bi (pošto je ucitaj() u jednom try) tiho odbacilo i
+  // sve ključeve posle „format"-a u localStorage-u.
+  function formatOpcijaPostoji(v) {
+    var opts = $('format').options;
+    for (var i = 0; i < opts.length; i++) if (opts[i].value === v) return true;
+    return false;
+  }
+
+  function ucitaj() {
+    try {
+      var s = localStorage.getItem(KLJUC);
+      if (!s) return;
+      var o = JSON.parse(s);
+      for (var k in DEFAULTS) {
+        if (!o.hasOwnProperty(k)) continue;
+        // „format" se prihvata samo ako postoji odgovarajuća <option> u #format —
+        // sprečava da sačuvano „webp" iz starije sesije preživi na browseru koji
+        // ga (još) ne podržava, i posle detekcije uklonio tu opciju iz DOM-a
+        if (k === 'format' && !formatOpcijaPostoji(o[k])) continue;
+        state[k] = o[k];
+      }
+    } catch (e) {}
+  }
+
+  // WEBP se nudi samo ako ga ovaj browser ume enkodovati. Mora da se pozove POSLE
+  // ucitaj() — inače ucitaj() prepiše ispravku sačuvanim (možda nepodržanim) format-om.
+  function detektujWebp() {
+    var t = document.createElement('canvas');
+    t.width = t.height = 1;
+    if (t.toDataURL('image/webp').indexOf('data:image/webp') !== 0) {
+      var o = $('format').querySelector('option[value="webp"]');
+      if (o) o.parentNode.removeChild(o);
+      if (state.format === 'webp') state.format = 'jpg';
+      DEFAULTS.format = 'jpg';
+    }
+  }
+
+  var stavke = [];
+  // Sledeći indeks čiji red treba iscrtati — čuva redosled ulaza i kad
+  // dekodovanje kasnijeg fajla završi pre ranijeg (asinhrono, redosled nije zagarantovan).
+  var sledeciZaCrtanje = 0;
+
+  function dodajFajlove(lista) {
+    var baza = stavke.length;
+    var n = lista.length;
+    var i;
+    // rezerviši mesto u nizu po indeksu ulaznog fajla pre dekodovanja
+    for (i = 0; i < n; i++) stavke.push(null);
+    $('brojInfo').textContent = stavke.length + ' fajlova';
+
+    for (i = 0; i < n; i++) (function (f, idx) {
+      ucitajSliku(f, function (greska, p) {
+        // trajnaGreska: dekodovanje palo — fajl nikad neće postati slika,
+        // ponovni pokušaj obrade nema smisla (za razliku od greske iz
+        // obradiStavku, koja zavisi od podešavanja i može se popraviti)
+        var s = greska
+          ? { ime: f.name, bajta: f.size, greska: greska, trajnaGreska: greska }
+          : p;
+        stavke[idx] = s;
+        $('brojInfo').textContent = stavke.length + ' fajlova';
+        // iscrtaj sve redove koji su sad na redu, po originalnom redosledu
+        while (sledeciZaCrtanje < stavke.length && stavke[sledeciZaCrtanje]) {
+          renderRed(stavke[sledeciZaCrtanje]);
+          sledeciZaCrtanje++;
+        }
+        osvezi();
+      });
+    })(lista[i], baza + i);
+  }
+
+  $('drop').onclick = function () { $('fajlovi').click(); };
+  $('fajlovi').onchange = function () { dodajFajlove(this.files); this.value = ''; };
+
+  ['dragenter', 'dragover'].forEach(function (e) {
+    document.addEventListener(e, function (ev) {
+      ev.preventDefault();
+      $('drop').classList.add('preko');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (e) {
+    document.addEventListener(e, function (ev) {
+      ev.preventDefault();
+      if (e === 'dragleave' && ev.relatedTarget) return;
+      $('drop').classList.remove('preko');
+      if (e === 'drop' && ev.dataTransfer && ev.dataTransfer.files.length) {
+        dodajFajlove(ev.dataTransfer.files);
+      }
+    });
+  });
+
+  // Upiši red u tabelu. Kolone „Novo" i „Ušteda" popunjava Zadatak 5.
+  function renderRed(s) {
+    var tr = document.createElement('tr');
+    s.tr = tr;
+    if (s.greska) {
+      tr.innerHTML =
+        '<td><div class="thumb sivo">⚠</div></td>' +
+        '<td class="fname bad"></td>' +
+        '<td class="num">—</td>' +
+        '<td class="bad" colspan="2"></td>' +
+        '<td style="text-align:right"><button disabled>Preuzmi</button> <button data-ukloni title="Ukloni">×</button></td>';
+      tr.querySelector('.fname').textContent = s.ime;
+      tr.querySelector('.bad[colspan]').textContent = s.greska;
+    } else {
+      tr.innerHTML =
+        '<td><img class="thumb" alt=""></td>' +
+        '<td class="fname"></td>' +
+        '<td class="num"></td>' +
+        '<td class="num" data-novo>…</td>' +
+        '<td class="save" data-ust>…</td>' +
+        '<td style="text-align:right"><button data-dl disabled>Preuzmi</button> <button data-ukloni title="Ukloni">×</button></td>';
+      tr.querySelector('.fname').textContent = s.ime;
+      tr.querySelector('.num').textContent = s.w + '×' + s.h + ' · ' + kb(s.bajta);
+      // sličica se crta iz izvorne slike, ne iz izlaznog canvasa — nezavisna od formata/quality-ja
+      var slic = nacrtaj(s.src, 68, 68, {
+        rezim: 'crop', boja: state.boja, providno: state.providno, alfaMoguca: true
+      });
+      tr.querySelector('.thumb').src = slic.toDataURL();
+    }
+    tr.querySelector('[data-ukloni]').onclick = function () { ukloniStavku(s); osvezi(); };
+    $('redovi').appendChild(tr);
+  }
+
+  // ---- samoprovera: pokreće se samo kad adresa ima #test ----
+  function samoprovera() {
+    var pali = 0, ukupno = 0, redovi = [];
+
+    function proveri(naziv, dobio, ocekivano) {
+      ukupno++;
+      var ok = JSON.stringify(dobio) === JSON.stringify(ocekivano);
+      if (ok) pali++;
+      redovi.push((ok ? 'OK   ' : 'PAO  ') + naziv +
+        (ok ? '' : '\n       dobio: ' + JSON.stringify(dobio) +
+                   '\n       očekivano: ' + JSON.stringify(ocekivano)));
+    }
+
+    // ---- tvrdnje ----
+    function d(pw, ph, p) { return racunajDimenzije(pw, ph, p); }
+
+    proveri('pixels: oba data',
+      d(1500, 1000, { jedinica: 'pixels', w: 800, h: 600, dpi: 96, neUvecavaj: false }),
+      { w: 800, h: 600 });
+
+    proveri('pixels: prazna visina se izvodi iz odnosa',
+      d(1500, 1000, { jedinica: 'pixels', w: 600, h: '', dpi: 96, neUvecavaj: false }),
+      { w: 600, h: 400 });
+
+    proveri('pixels: prazna širina se izvodi iz odnosa',
+      d(1500, 1000, { jedinica: 'pixels', w: '', h: 400, dpi: 96, neUvecavaj: false }),
+      { w: 600, h: 400 });
+
+    proveri('oba prazna daju original',
+      d(1500, 1000, { jedinica: 'pixels', w: '', h: '', dpi: 96, neUvecavaj: false }),
+      { w: 1500, h: 1000 });
+
+    proveri('percent: 50% obe strane',
+      d(1500, 1000, { jedinica: 'percent', w: 50, h: 50, dpi: 96, neUvecavaj: false }),
+      { w: 750, h: 500 });
+
+    proveri('percent: 50% širine, visina iz odnosa',
+      d(1500, 1000, { jedinica: 'percent', w: 50, h: '', dpi: 96, neUvecavaj: false }),
+      { w: 750, h: 500 });
+
+    proveri('cm pri 300 dpi',
+      d(3000, 2000, { jedinica: 'cm', w: 15, h: 10, dpi: 300, neUvecavaj: false }),
+      { w: 1772, h: 1181 });
+
+    proveri('inch pri 300 dpi',
+      d(3000, 2000, { jedinica: 'inch', w: 6, h: 4, dpi: 300, neUvecavaj: false }),
+      { w: 1800, h: 1200 });
+
+    proveri('neUvecavaj sprečava uvećanje portreta',
+      d(1000, 1500, { jedinica: 'pixels', w: 1600, h: '', dpi: 96, neUvecavaj: true }),
+      { w: 1000, h: 1500 });
+
+    proveri('neUvecavaj ne dira sliku veću od okvira',
+      d(3000, 2000, { jedinica: 'pixels', w: 1600, h: '', dpi: 96, neUvecavaj: true }),
+      { w: 1600, h: 1067 });
+
+    proveri('neUvecavaj čuva odnos zadatog okvira',
+      d(400, 400, { jedinica: 'pixels', w: 800, h: 600, dpi: 96, neUvecavaj: true }),
+      { w: 400, h: 300 });
+
+    proveri('neUvecavaj ograničava i kad je samo jedna osa prevelika',
+      d(1000, 1000, { jedinica: 'pixels', w: 500, h: 2000, dpi: 96, neUvecavaj: true }),
+      { w: 250, h: 1000 });
+
+    proveri('nula i negativno se tretiraju kao prazno',
+      d(1500, 1000, { jedinica: 'pixels', w: 0, h: -5, dpi: 96, neUvecavaj: false }),
+      { w: 1500, h: 1000 });
+
+    // efektivnoStanje() mora da sanira dpi <= 0 na 96 (isti put kao pravi poziv:
+    // state → efektivnoStanje() → racunajDimenzije) — regresija bi dala 1×1 px
+    (function () {
+      var backup = { jedinica: state.jedinica, w: state.w, h: state.h, dpi: state.dpi, neUvecavaj: state.neUvecavaj };
+      state.jedinica = 'cm'; state.w = 15; state.h = 10; state.neUvecavaj = false;
+
+      state.dpi = 96;
+      var oc96 = d(3000, 2000, efektivnoStanje());
+      state.dpi = 0;
+      var oc0 = d(3000, 2000, efektivnoStanje());
+      state.dpi = -5;
+      var ocNeg = d(3000, 2000, efektivnoStanje());
+
+      proveri('efektivnoStanje: dpi 0 se sanira kao 96', oc0, oc96);
+      proveri('efektivnoStanje: dpi -5 se sanira kao 96', ocNeg, oc96);
+
+      state.jedinica = backup.jedinica; state.w = backup.w; state.h = backup.h;
+      state.dpi = backup.dpi; state.neUvecavaj = backup.neUvecavaj;
+    })();
+
+    proveri('kb: bajtovi', kb(512), '512 B');
+    proveri('kb: kilobajti', kb(2048), '2 KB');
+    proveri('kb: megabajti', kb(3 * 1024 * 1024), '3.00 MB');
+    proveri('kb: nepoznato', kb(null), '—');
+
+    proveri('mimeZa: jpg uvek jpeg', mimeZa('jpg', 'image/png'), 'image/jpeg');
+    proveri('mimeZa: png uvek png', mimeZa('png', 'image/jpeg'), 'image/png');
+    proveri('mimeZa: webp uvek webp', mimeZa('webp', 'image/jpeg'), 'image/webp');
+    proveri('mimeZa: original PNG ulaz ostaje PNG', mimeZa('original', 'image/png'), 'image/png');
+    proveri('mimeZa: original nepoznat MIME → png', mimeZa('original', 'image/gif'), 'image/png');
+    proveri('mimeZa: original WEBP ulaz ostaje WEBP', mimeZa('original', 'image/webp'), 'image/webp');
+
+    proveri('alfaMoguca: jpeg ne', alfaMoguca('image/jpeg'), false);
+    proveri('alfaMoguca: png da', alfaMoguca('image/png'), true);
+    proveri('alfaMoguca: webp da', alfaMoguca('image/webp'), true);
+
+    proveri('nastavak', nastavak('image/jpeg'), 'jpg');
+    proveri('preimenuj menja nastavak', preimenuj('slika.PNG', 'image/webp'), 'slika.webp');
+    proveri('preimenuj čuva tačke u imenu', preimenuj('a.b.c.jpg', 'image/png'), 'a.b.c.png');
+    proveri('preimenuj bez nastavka', preimenuj('bezTacke', 'image/jpeg'), 'bezTacke.jpg');
+
+    // uzorak 100×50, levo crveno, desno plavo
+    var uz = document.createElement('canvas');
+    uz.width = 100; uz.height = 50;
+    var ux = uz.getContext('2d');
+    ux.fillStyle = '#ff0000'; ux.fillRect(0, 0, 50, 50);
+    ux.fillStyle = '#0000ff'; ux.fillRect(50, 0, 50, 50);
+
+    function piksel(c, x, y) {
+      var d = c.getContext('2d').getImageData(x, y, 1, 1).data;
+      return [d[0], d[1], d[2], d[3]];
+    }
+
+    var izl = nacrtaj(uz, 200, 200, { rezim: 'stretch', boja: '#00ff00', providno: false, alfaMoguca: false });
+    proveri('stretch: dimenzije', [izl.width, izl.height], [200, 200]);
+    proveri('stretch: popunjava ceo canvas, bez pozadine', piksel(izl, 10, 190), [255, 0, 0, 255]);
+
+    izl = nacrtaj(uz, 200, 200, { rezim: 'fit', boja: '#00ff00', providno: false, alfaMoguca: false });
+    proveri('fit: dimenzije', [izl.width, izl.height], [200, 200]);
+    proveri('fit: trake su boja pozadine', piksel(izl, 10, 10), [0, 255, 0, 255]);
+    proveri('fit: sredina je slika', piksel(izl, 10, 100), [255, 0, 0, 255]);
+
+    izl = nacrtaj(uz, 200, 200, { rezim: 'crop', boja: '#00ff00', providno: false, alfaMoguca: false });
+    proveri('crop: dimenzije', [izl.width, izl.height], [200, 200]);
+    proveri('crop: nema traka pozadine', piksel(izl, 10, 10), [255, 0, 0, 255]);
+
+    izl = nacrtaj(uz, 200, 200, { rezim: 'fit', boja: '#00ff00', providno: true, alfaMoguca: true });
+    proveri('providno: trake ostaju prozirne', piksel(izl, 10, 10)[3], 0);
+
+    izl = nacrtaj(uz, 200, 200, { rezim: 'fit', boja: '#00ff00', providno: true, alfaMoguca: false });
+    proveri('providno se ignoriše kad format ne ume alfa', piksel(izl, 10, 10), [0, 255, 0, 255]);
+
+    proveri('uUtf8: ASCII', Array.prototype.slice.call(uUtf8('AB')), [65, 66]);
+    proveri('uUtf8: ćirilica', Array.prototype.slice.call(uUtf8('Ж')), [0xD0, 0x96]);
+    proveri('uUtf8: š', Array.prototype.slice.call(uUtf8('š')), [0xC5, 0xA1]);
+    proveri('uUtf8: emodži izvan BMP',
+      Array.prototype.slice.call(uUtf8('😀')), [0xF0, 0x9F, 0x98, 0x80]);
+    proveri('uUtf8: usamljeni visoki surogat čuva sledeći znak',
+      Array.prototype.slice.call(uUtf8('\uD800A')), [0xED, 0xA0, 0x80, 0x41]);
+
+    // standardni kontrolni vektor za CRC-32
+    proveri('crc32 kontrolni vektor', crc32(uUtf8('123456789')), 0xCBF43926);
+    proveri('crc32 praznog niza', crc32(new Uint8Array(0)), 0);
+
+    var zip = napraviZip([{ ime: 'a.txt', bajtovi: uUtf8('zdravo') }]);
+    proveri('zip: tip bloba', zip.type, 'application/zip');
+    // 30 (lokalni header) + 5 (ime) + 6 (podaci) + 46 + 5 (centralni) + 22 (EOCD)
+    proveri('zip: tačna veličina', zip.size, 114);
+    proveri('zip: prazan ulaz daje samo EOCD', napraviZip([]).size, 22);
+
+    // ---- ispis ----
+    var pre = document.createElement('pre');
+    pre.style.cssText = 'padding:20px;font:13px/1.7 ui-monospace,Consolas,monospace;white-space:pre-wrap';
+    pre.textContent = pali + '/' + ukupno + ' prošlo\n\n' + redovi.join('\n');
+    document.body.innerHTML = '';
+    document.body.appendChild(pre);
+    document.title = (pali === ukupno ? 'OK ' : 'PALO ') + pali + '/' + ukupno;
+  }
+
+  // harness je dostupan i iz konzole, jer neka okruženja gube #test iz adrese
+  window.samoprovera = samoprovera;
+
+  if (location.hash === '#test') { samoprovera(); return; }
+
+  // ---- inicijalizacija UI-ja (kasniji zadaci dopunjuju ovaj deo) ----
+
+  // Nacrtaj trenutni pregled na osnovu prve ispravne stavke i trenutnog state-a.
+  function trenutniPregled() {
+    var s = null, i;
+    for (i = 0; i < stavke.length; i++) {
+      if (!stavke[i] || stavke[i].greska) continue;   // mesto još nije razrešeno (asinhrono dekodovanje) ili je greška
+      s = stavke[i];
+      break;
+    }
+    if (!s) { $('pregledInfo').textContent = ''; return; }
+
+    var mime = mimeZa(state.format, s.tip);
+    var d = racunajDimenzije(s.w, s.h, efektivnoStanje());
+    try {
+      var izlaz = nacrtaj(s.src, d.w, d.h, {
+        rezim: state.rezim, boja: state.boja,
+        providno: state.providno, alfaMoguca: alfaMoguca(mime)
+      });
+      var cv = $('cv');
+      cv.width = izlaz.width; cv.height = izlaz.height;
+      cv.getContext('2d').drawImage(izlaz, 0, 0);
+      $('pregledInfo').textContent = d.w + ' × ' + d.h + ' px · ' + nastavak(mime).toUpperCase();
+    } catch (e) {
+      // nacrtaj baca kad getContext('2d') vrati null (canvas preko limita browsera) —
+      // izuzetak ovde ne sme da izleti iz osvezi() i spreči zakazivanje batcha/snimanje
+      $('pregledInfo').textContent = 'Slika je prevelika za ovaj browser';
+    }
+  }
+
+  // Upiši state u kontrole trake i uskladi vidljivost/aktivno dugme.
+  function renderIzgled() {
+    $('w').value = state.w;
+    $('h').value = state.h;
+    $('jedinica').value = state.jedinica;
+    $('dpi').value = state.dpi;
+    $('format').value = state.format;
+    $('quality').value = state.quality;
+    $('qualityVal').textContent = state.quality;
+    $('boja').value = state.boja;
+    $('providno').checked = state.providno;
+    $('neUvecavaj').checked = state.neUvecavaj;
+
+    $('dpiFld').classList.toggle('hidden', state.jedinica !== 'cm' && state.jedinica !== 'inch');
+    // Quality se za PNG ne krije (raspored trake ostaje isti) — samo se onemogući i zasivi.
+    var pngKval = state.format === 'png';
+    $('kvalFld').classList.toggle('disabledFld', pngKval);
+    $('quality').disabled = pngKval;
+    $('provFld').classList.toggle('hidden', mimeZa(state.format, 'image/png') === 'image/jpeg');
+
+    var dugmad = document.querySelectorAll('.mode');
+    for (var i = 0; i < dugmad.length; i++) {
+      dugmad[i].classList.toggle('on', dugmad[i].getAttribute('data-rezim') === state.rezim);
+    }
+  }
+
+  var uToku = false, zahtev = 0;
+
+  // Obrada je sekvencijalna namerno — paralelno dekodovanje desetak slika
+  // obara memoriju na telefonu.
+  function obradiSve() {
+    var moj = ++zahtev;
+    if (uToku) return;                 // tekući prolaz će videti novi zahtev
+    uToku = true;
+
+    var i = 0, ukupnoOrig = 0, ukupnoNovo = 0;
+    $('prog').classList.remove('hidden');
+    $('progInfo').classList.remove('hidden');
+    $('prog').firstChild.style.width = '0%';         // reset na početku svakog prolaza
+
+    function dalje() {
+      if (moj !== zahtev) {            // podešavanja su se promenila u međuvremenu
+        uToku = false;
+        obradiSve();
+        return;
+      }
+      if (i >= stavke.length) {
+        uToku = false;
+        $('prog').classList.add('hidden');
+        $('progInfo').classList.add('hidden');
+        var uOdst = ukupnoOrig ? Math.round((1 - ukupnoNovo / ukupnoOrig) * 100) : 0;
+        $('zbir').textContent = brojDobrih() + ' slika · ' + kb(ukupnoOrig) +
+          ' → ' + kb(ukupnoNovo) +
+          (ukupnoOrig ? '  (' + (uOdst >= 0 ? '−' : '+') + Math.abs(uOdst) + '%)' : '');
+        $('zip').disabled = brojDobrih() === 0;
+        return;
+      }
+
+      var s = stavke[i++];
+      // mesto još nije razrešeno (asinhrono dekodovanje fajla još traje) —
+      // preskoči za sada, novi osvezi() poziv će kad razrešenje stigne ionako
+      // restartovati prolaz (moj !== zahtev iznad)
+      if (!s) { setTimeout(dalje, 0); return; }
+
+      $('prog').firstChild.style.width = Math.round(i / stavke.length * 100) + '%';
+      $('progInfo').textContent = i + '/' + stavke.length;
+
+      // samo trajne greške (dekodovanje) preskaču zauvek; greška iz obrade
+      // zavisi od podešavanja, pa se stavka mora pokušati ponovo
+      if (s.trajnaGreska) { osveziRed(s); dalje(); return; }
+      s.greska = null;
+
+      obradiStavku(s, function (greska) {
+        // stavka je mogla ranije uspešno da se obradi (drugi prolaz, izmenjena
+        // podešavanja) — ako sad padne, odbaci stari blob da brojDobrih/zbir/zip
+        // ne broje zastarelu (uspešnu) obradu kao još uvek važeću
+        if (greska) { s.greska = greska; s.blob = null; }
+        else { s.greska = null; ukupnoOrig += s.bajta; ukupnoNovo += s.blob.size; }
+        osveziRed(s);
+        // predah između slika: pušta browser da oslobodi memoriju i osveži UI
+        setTimeout(dalje, 0);
+      });
+    }
+    dalje();
+  }
+
+  function brojDobrih() {
+    var n = 0, i;
+    for (i = 0; i < stavke.length; i++) if (stavke[i] && stavke[i].blob) n++;
+    return n;
+  }
+
+  var odloz = null;
+  function osvezi() {
+    trenutniPregled();                 // pregled je trenutan
+    clearTimeout(odloz);
+    odloz = setTimeout(obradiSve, 200); // batch čeka da korisnik pusti slajder
+    sacuvaj();
+  }
+
+  // Ukloni stavku iz liste i oslobodi njene resurse (ImageBitmap, red u tabeli).
+  function ukloniStavku(s) {
+    if (s.src && s.src.close) s.src.close();
+    if (s.tr && s.tr.parentNode) s.tr.parentNode.removeChild(s.tr);
+    var i = stavke.indexOf(s);
+    if (i >= 0) {
+      stavke.splice(i, 1);
+      // sledeciZaCrtanje je indeks u ovom istom nizu — pomeri ga unazad ako je
+      // uklonjena stavka bila ispred njega, inače kasnije dodati fajlovi
+      // nikad ne dobiju red (indeks bi ostao trajno prevelik)
+      if (i < sledeciZaCrtanje) sledeciZaCrtanje--;
+    }
+    $('brojInfo').textContent = stavke.length + ' fajlova';
+  }
+
+  function osveziRed(s) {
+    if (!s.tr) return;
+    if (s.greska) {
+      // red greške iz dekodovanja (renderRed) nema data-novo/data-ust —
+      // ta kolona je spojena u jedno .bad[colspan] polje popunjeno već pri
+      // crtanju; ovde se osvežava samo red koji je PRVO nacrtan kao uspešan
+      // pa je obradiStavku naknadno prijavio grešku (data-novo/data-ust postoje)
+      var novo = s.tr.querySelector('[data-novo]');
+      if (novo) novo.textContent = '—';
+      var e = s.tr.querySelector('[data-ust]');
+      if (e) { e.textContent = s.greska; e.className = 'bad'; }
+      // ako je red ranije bio uspešan (drugi prolaz sad pao), ugasi „Preuzmi"
+      // i skini staru onclick — ne sme da nudi preuzimanje zastarelog bloba
+      var dlErr = s.tr.querySelector('[data-dl]');
+      if (dlErr) { dlErr.disabled = true; dlErr.onclick = null; }
+      return;
+    }
+    s.tr.querySelector('[data-novo]').textContent =
+      s.novaW + '×' + s.novaH + ' · ' + kb(s.blob.size);
+    var u = Math.round((1 - s.blob.size / s.bajta) * 100);
+    var el = s.tr.querySelector('[data-ust]');
+    el.textContent = (u >= 0 ? '−' : '+') + Math.abs(u) + '%';
+    el.className = u >= 0 ? 'save' : 'save bad';
+
+    var dl = s.tr.querySelector('[data-dl]');
+    dl.disabled = false;
+    dl.onclick = function () { preuzmi(s.blob, preimenuj(s.ime, s.noviMime)); };
+  }
+
+  // Preuzimanje bloba pod zadatim imenom.
+  function preuzmi(blob, ime) {
+    var a = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    a.href = url; a.download = ime;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  // Imena se ne smeju ponoviti unutar arhive.
+  function jedinstvenoIme(ime, zauzeta) {
+    if (!zauzeta[ime]) { zauzeta[ime] = true; return ime; }
+    var tacka = ime.lastIndexOf('.');
+    var osnova = tacka > 0 ? ime.slice(0, tacka) : ime;
+    var nast = tacka > 0 ? ime.slice(tacka) : '';
+    var n = 2;
+    while (zauzeta[osnova + '-' + n + nast]) n++;
+    var novo = osnova + '-' + n + nast;
+    zauzeta[novo] = true;
+    return novo;
+  }
+
+  $('zip').onclick = function () {
+    var dobre = [], i;
+    for (i = 0; i < stavke.length; i++) if (stavke[i] && stavke[i].blob) dobre.push(stavke[i]);
+    if (!dobre.length) return;
+
+    // imena se dodeljuju sinhrono, u petlji, pre nego što ijedan FileReader krene —
+    // tako sufiks „-2" prati redosled u listi umesto redosleda asinhronog čitanja.
+    var imena = [], zauzeta = {};
+    for (i = 0; i < dobre.length; i++) {
+      imena.push(jedinstvenoIme(preimenuj(dobre[i].ime, dobre[i].noviMime), zauzeta));
+    }
+
+    var unosi = [], ostalo = dobre.length;
+    dobre.forEach(function (s, idx) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        unosi[idx] = {
+          ime: imena[idx],
+          bajtovi: new Uint8Array(fr.result)
+        };
+        if (--ostalo === 0) preuzmi(napraviZip(unosi), 'smanjene-slike.zip');
+      };
+      fr.readAsArrayBuffer(s.blob);
+    });
+  };
+
+  // #w/#h/#dpi namerno NE zovu renderIzgled() — to bi upisalo state nazad u polje
+  // koje korisnik trenutno kuca (npr. prazno → 96 → renderIzgled ispisuje "96" preko
+  // onoga što korisnik tek kuca). osvezi() svejedno vidi promenu preko state-a.
+  $('w').oninput = function () { state.w = this.value === '' ? '' : Number(this.value); osvezi(); };
+  $('h').oninput = function () { state.h = this.value === '' ? '' : Number(this.value); osvezi(); };
+  $('jedinica').onchange = function () { state.jedinica = this.value; renderIzgled(); osvezi(); };
+  $('dpi').oninput = function () { state.dpi = this.value === '' ? '' : Number(this.value); osvezi(); };
+  $('format').onchange = function () { state.format = this.value; renderIzgled(); osvezi(); };
+  $('quality').oninput = function () { state.quality = Number(this.value); renderIzgled(); osvezi(); };
+  $('boja').oninput = function () { state.boja = this.value; renderIzgled(); osvezi(); };
+  $('providno').onchange = function () { state.providno = this.checked; renderIzgled(); osvezi(); };
+  $('neUvecavaj').onchange = function () { state.neUvecavaj = this.checked; renderIzgled(); osvezi(); };
+
+  var modeDugmad = document.querySelectorAll('.mode');
+  for (var mi = 0; mi < modeDugmad.length; mi++) (function (b) {
+    b.onclick = function () { state.rezim = b.getAttribute('data-rezim'); renderIzgled(); osvezi(); };
+  })(modeDugmad[mi]);
+
+  ucitaj();
+  detektujWebp();
+  renderIzgled();
+  trenutniPregled();
+})();
+</script>
+</body>
+</html>
