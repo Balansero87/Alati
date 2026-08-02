@@ -296,11 +296,12 @@
   for (var kljuc in DEFAULTS) state[kljuc] = DEFAULTS[kljuc];
 
   // state.dpi ume da bude '' dok korisnik briše polje pre kucanja nove vrednosti
-  // (vidi #dpi oninput) — ovde se, samo za potrebe računa, prazno tretira kao 96,
-  // bez upisivanja te vrednosti nazad u state ili u polje.
+  // (vidi #dpi oninput) — ovde se, samo za potrebe računa, svaka vrednost koja
+  // nije pozitivan broj (prazno, 0, negativno, NaN) tretira kao 96, bez upisivanja
+  // te vrednosti nazad u state ili u polje.
   function efektivnoStanje() {
     var dpi = state.dpi;
-    if (dpi === '' || dpi === null || dpi === undefined || isNaN(dpi)) dpi = 96;
+    if (!(dpi > 0)) dpi = 96;
     return {
       jedinica: state.jedinica, w: state.w, h: state.h, dpi: dpi,
       neUvecavaj: state.neUvecavaj
@@ -600,6 +601,16 @@
     try { localStorage.setItem(KLJUC, JSON.stringify(state)); } catch (e) {}
   }
 
+  // Direktno poređenje po .value umesto CSS selektora građenog od nepouzdane
+  // vrednosti — querySelector('[value="' + v + '"]') baca SyntaxError čim v
+  // sadrži navodnik, što bi (pošto je ucitaj() u jednom try) tiho odbacilo i
+  // sve ključeve posle „format"-a u localStorage-u.
+  function formatOpcijaPostoji(v) {
+    var opts = $('format').options;
+    for (var i = 0; i < opts.length; i++) if (opts[i].value === v) return true;
+    return false;
+  }
+
   function ucitaj() {
     try {
       var s = localStorage.getItem(KLJUC);
@@ -610,7 +621,7 @@
         // „format" se prihvata samo ako postoji odgovarajuća <option> u #format —
         // sprečava da sačuvano „webp" iz starije sesije preživi na browseru koji
         // ga (još) ne podržava, i posle detekcije uklonio tu opciju iz DOM-a
-        if (k === 'format' && !$('format').querySelector('option[value="' + o[k] + '"]')) continue;
+        if (k === 'format' && !formatOpcijaPostoji(o[k])) continue;
         state[k] = o[k];
       }
     } catch (e) {}
@@ -782,6 +793,26 @@
     proveri('nula i negativno se tretiraju kao prazno',
       d(1500, 1000, { jedinica: 'pixels', w: 0, h: -5, dpi: 96, neUvecavaj: false }),
       { w: 1500, h: 1000 });
+
+    // efektivnoStanje() mora da sanira dpi <= 0 na 96 (isti put kao pravi poziv:
+    // state → efektivnoStanje() → racunajDimenzije) — regresija bi dala 1×1 px
+    (function () {
+      var backup = { jedinica: state.jedinica, w: state.w, h: state.h, dpi: state.dpi, neUvecavaj: state.neUvecavaj };
+      state.jedinica = 'cm'; state.w = 15; state.h = 10; state.neUvecavaj = false;
+
+      state.dpi = 96;
+      var oc96 = d(3000, 2000, efektivnoStanje());
+      state.dpi = 0;
+      var oc0 = d(3000, 2000, efektivnoStanje());
+      state.dpi = -5;
+      var ocNeg = d(3000, 2000, efektivnoStanje());
+
+      proveri('efektivnoStanje: dpi 0 se sanira kao 96', oc0, oc96);
+      proveri('efektivnoStanje: dpi -5 se sanira kao 96', ocNeg, oc96);
+
+      state.jedinica = backup.jedinica; state.w = backup.w; state.h = backup.h;
+      state.dpi = backup.dpi; state.neUvecavaj = backup.neUvecavaj;
+    })();
 
     proveri('kb: bajtovi', kb(512), '512 B');
     proveri('kb: kilobajti', kb(2048), '2 KB');
