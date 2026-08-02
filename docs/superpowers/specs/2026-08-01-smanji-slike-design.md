@@ -209,8 +209,13 @@ Slučajevi koji se hvataju:
 - `toBlob` vrati `null` → „Neuspešno kodiranje".
 - Ciljne dimenzije ≤ 0 ili nisu broj → validacija pre obrade, poruka uz polje.
 
-Memorija: `URL.revokeObjectURL` posle svake upotrebe, `bitmap.close()` posle
-crtanja, canvas se ne drži u nizu rezultata (čuva se samo blob).
+Memorija: `URL.revokeObjectURL` posle svake upotrebe, canvas se ne drži u nizu
+rezultata (čuva se samo blob).
+
+`ImageBitmap` se **ne** zatvara posle crtanja, nego tek kad se stavka ukloni iz
+liste. Razlog: svaka promena podešavanja pokreće nov prolaz nad istim slikama, a
+zatvorena bitmapa bi tražila ponovno dekodovanje fajla pri svakom pomeraju
+slajdera. Cena te odluke je opisana u „Poznata ograničenja".
 
 ## Stanje
 
@@ -240,6 +245,27 @@ Projekat nema test suite. Provera je ručna, u browseru, po ovoj listi:
 11. Konzola bez grešaka i upozorenja.
 
 ## Poznata ograničenja
+
+- **Sve dekodovane slike stoje u memoriji dok traje batch.** `ImageBitmap` se
+  drži na `s.src` i zatvara tek pri uklanjanju stavke, pa zauzeće raste linearno
+  sa brojem slika — grubo `širina × visina × 4` bajta po slici, nezavisno od
+  veličine fajla na disku. Fotografija 4000×3000 zauzima oko 48 MB, deset takvih
+  oko 0,5 GB.
+
+  Ovo je svesna razmena, ne propust: bez toga bi svaki pomeraj quality slajdera
+  tražio ponovno dekodovanje svih fajlova. Delimično potire razlog zbog kog je
+  obrada sekvencijalna („paralelno dekodovanje desetak slika obara memoriju na
+  telefonu") — sekvencijalnost i dalje sprečava vršno zauzeće tokom samog
+  dekodovanja, ali ne i zbirno zauzeće posle njega.
+
+  Na desktopu nebitno. Na starijem telefonu sa dvadesetak fotografija iz
+  telefonske kamere može da izazove pad kartice. Zaobilaženje za korisnika:
+  obrađivati u manjim grupama i uklanjati gotove stavke dugmetom „×", što
+  poziva `bitmap.close()`.
+
+  Ako ovo ikad postane stvaran problem, rešenje nije zatvarati bitmape nego
+  čuvati original kao `Blob` i dekodovati ga na zahtev, uz keširanje samo one
+  slike koja je trenutno u pregledu.
 
 - Canvas re-enkodira JPEG kroz sopstveni enkoder, što je generacijski gubitak.
   Za smanjivanje dimenzija nebitno; za „samo smanji fajl bez menjanja dimenzija"
