@@ -5,15 +5,136 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RadGeld</title>
 <style>
-body { font: 15px/1.5 system-ui, "Segoe UI", Arial, sans-serif; margin: 0; padding: 16px; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { font: 15px/1.5 system-ui, "Segoe UI", Arial, sans-serif; margin: 0;
+       padding: 16px; background: #f2f4f6; color: #1b1f23; }
+header, main { max-width: 680px; margin: 0 auto; }
+h1 { font-size: 26px; margin: 8px 0 2px; }
+h2 { font-size: 16px; margin: 0 0 12px; }
+.podnaslov { margin: 0 0 18px; color: #5c6670; }
+.kartica { background: #fff; border: 1px solid #dde2e6; border-radius: 10px;
+           padding: 16px; margin-bottom: 14px; }
+summary { cursor: pointer; font-weight: 600; }
+details[open] summary { margin-bottom: 12px; }
+
+.mreza { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.polje { display: flex; flex-direction: column; flex: 1 1 160px; font-size: 13px;
+         color: #5c6670; gap: 4px; }
+.mreza-postavke .polje { flex: 1 1 140px; }
+input { font: inherit; padding: 8px 10px; border: 1px solid #c9d1d8;
+        border-radius: 7px; background: #fff; color: inherit; width: 100%; }
+input:focus { outline: 2px solid #2f6fdb; outline-offset: -1px; border-color: #2f6fdb; }
+
+.nacini { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.nacin { font: inherit; padding: 8px 12px; border: 1px solid #c9d1d8; background: #fff;
+         border-radius: 7px; cursor: pointer; flex: 1 1 auto; }
+.nacin.izabran { background: #2f6fdb; border-color: #2f6fdb; color: #fff; }
+
+.savet { font-size: 12px; color: #78838d; margin: 4px 0 10px; }
+.pregled { font-size: 18px; font-weight: 600; margin: 6px 0 10px; }
+.greska { color: #b3261e; margin: 0 0 10px; font-size: 13px; }
+.glavno { font: inherit; font-weight: 600; padding: 10px 18px; border: 0;
+          border-radius: 7px; background: #157f3b; color: #fff; cursor: pointer; }
+.red-dugmadi { display: flex; gap: 8px; }
+.red-dugmadi button { font: inherit; padding: 8px 14px; border: 1px solid #c9d1d8;
+                      background: #fff; border-radius: 7px; cursor: pointer; }
+
+.zbirovi { display: flex; gap: 10px; flex-wrap: wrap; }
+.zbir { flex: 1 1 170px; margin-bottom: 14px; }
+.naslov-zbira { font-size: 12px; color: #78838d; text-transform: uppercase;
+                letter-spacing: .04em; }
+.novac { font-size: 22px; font-weight: 700; margin: 2px 0; }
+.sitno { font-size: 12px; color: #78838d; }
+
+.mesec { display: flex; justify-content: space-between; font-weight: 600;
+         padding: 10px 0 6px; border-bottom: 1px solid #eceff1; margin-top: 6px; }
+.red { display: flex; align-items: center; gap: 8px; padding: 8px 0;
+       border-bottom: 1px solid #f2f4f6; }
+.oznaka { font-size: 17px; }
+.datum { font-size: 12px; color: #78838d; white-space: nowrap; }
+.opis { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+        white-space: nowrap; }
+.km { font-size: 12px; color: #78838d; white-space: nowrap; }
+.usteda { font-weight: 600; white-space: nowrap; }
+.negativno, .negativno .novac { color: #b3261e; }
+.obrisi { border: 0; background: transparent; font-size: 18px; line-height: 1;
+          color: #9aa4ad; cursor: pointer; padding: 0 4px; }
+.obrisi:hover { color: #b3261e; }
+.prazno { color: #78838d; margin: 0; }
+
 pre { font: 13px/1.5 Consolas, monospace; }
 .ok { color: #157f3b; }
 .palo { color: #b3261e; font-weight: bold; }
+
+@media (prefers-color-scheme: dark) {
+  body { background: #16191c; color: #e6eaee; }
+  .kartica { background: #1f2428; border-color: #2f363c; }
+  .podnaslov, .savet, .naslov-zbira, .sitno, .datum, .km, .polje, .prazno { color: #9aa4ad; }
+  input, .nacin, .red-dugmadi button { background: #171b1e; border-color: #39414a; color: #e6eaee; }
+  .nacin.izabran { background: #2f6fdb; border-color: #2f6fdb; color: #fff; }
+  .mesec { border-color: #2f363c; }
+  .red { border-color: #23282c; }
+  .negativno, .negativno .novac { color: #ff8a80; }
+}
 </style>
 </head>
 <body>
 
-<div id="app"></div>
+<header>
+  <h1>RadGeld</h1>
+  <p class="podnaslov">Koliko je novca ostalo u džepu zato što auto nije korišćen</p>
+</header>
+
+<main>
+
+<section class="kartica">
+  <h2>Nova vožnja</h2>
+  <div class="mreza">
+    <label class="polje">Datum<input type="date" id="datum"></label>
+    <label class="polje">Kilometri<input type="text" id="km" inputmode="decimal" placeholder="npr. 12,5"></label>
+  </div>
+  <div class="nacini" id="nacini">
+    <button type="button" class="nacin izabran" data-nacin="bicikl">🚲 Bicikl</button>
+    <button type="button" class="nacin" data-nacin="pesice">🚶 Pešice</button>
+    <button type="button" class="nacin" data-nacin="prevoz">🚌 Prevoz</button>
+  </div>
+  <div class="mreza">
+    <label class="polje" id="poljeKarta" hidden>Cena karte<input type="text" id="cenaKarte" inputmode="decimal" placeholder="npr. 1,20"></label>
+    <label class="polje">Opis (opciono)<input type="text" id="opis" placeholder="npr. do posla"></label>
+  </div>
+  <p class="savet">Tamo i nazad? Upiši zbir kilometara — jedan unos je cela vožnja.</p>
+  <p class="pregled" id="pregled">Ušteda: —</p>
+  <p class="greska" id="greskaUnos" hidden></p>
+  <button type="button" class="glavno" id="dodaj">Dodaj vožnju</button>
+</section>
+
+<section class="zbirovi" id="zbirovi"></section>
+
+<section class="kartica">
+  <h2>Istorija</h2>
+  <div id="lista"></div>
+</section>
+
+<details class="kartica">
+  <summary>Postavke</summary>
+  <div class="mreza mreza-postavke">
+    <label class="polje">Potrošnja (l/100 km)<input type="text" id="p_potrosnja" inputmode="decimal"></label>
+    <label class="polje">Cena goriva (po litru)<input type="text" id="p_cenaGoriva" inputmode="decimal"></label>
+    <label class="polje">Ostali trošak po km<input type="text" id="p_trosakPoKm" inputmode="decimal"></label>
+    <label class="polje">Parking po vožnji<input type="text" id="p_parkingPoVoznji" inputmode="decimal"></label>
+    <label class="polje">CO₂ (g/km)<input type="text" id="p_co2PoKm" inputmode="decimal"></label>
+    <label class="polje">Valuta<input type="text" id="p_valuta"></label>
+  </div>
+  <p class="savet">Prazno ili neispravno polje se u računu broji kao podrazumevana vrednost, a ostaje zapisano onako kako si ga ukucao. Promena bilo koje postavke odmah preračunava celu istoriju.</p>
+  <div class="red-dugmadi">
+    <button type="button" id="izvezi">Izvezi</button>
+    <button type="button" id="uvezi">Uvezi</button>
+    <input type="file" id="uvozFajl" accept=".json,application/json" hidden>
+  </div>
+</details>
+
+</main>
 
 <script>
 (function () {
@@ -168,6 +289,16 @@ pre { font: 13px/1.5 Consolas, monospace; }
     return n.toFixed(2).replace('.', ',') + ' ' + valuta;
   }
 
+  function formatirajKm(broj) {
+    var n = isFinite(broj) ? broj : 0;
+    return n.toFixed(1).replace('.', ',') + ' km';
+  }
+
+  function formatirajKg(broj) {
+    var n = isFinite(broj) ? broj : 0;
+    return n.toFixed(1).replace('.', ',') + ' kg CO₂';
+  }
+
   function dodajVoznju(stanje, v) {
     var lista = stanje.voznje.slice();
     lista.push(v);
@@ -257,6 +388,8 @@ pre { font: 13px/1.5 Consolas, monospace; }
     proveri('zbir grupe', blizu(grupisiPoMesecu(V, P)[0].novac, 5.64), true);
     proveri('format zarez', formatiraj(3.418, '€'), '3,42 €');
     proveri('format negativan', formatiraj(-1.2, '€'), '-1,20 €');
+    proveri('format km', formatirajKm(20), '20,0 km');
+    proveri('format kg', formatirajKg(1.5), '1,5 kg CO₂');
 
     /* --- stanje, kapa, uvoz ------------------------------------------- */
 
@@ -281,7 +414,270 @@ pre { font: 13px/1.5 Consolas, monospace; }
     proveri('bezHtml ostavlja tekst', bezHtml('do posla i nazad'), 'do posla i nazad');
   }
 
-  if (location.hash === '#test') { samoprovera(); }
+  /* ------------------------------------------------------------------ *
+   * Cuvanje. Postavke se ovde NE saniraju — u localStorage ostaje ono
+   * sto je korisnik ukucao, sanira se tek pri racunu.
+   * ------------------------------------------------------------------ */
+
+  var KLJUC = 'radGeld.v1';
+
+  function podrazumevanoStanje() {
+    return { verzija: 1, postavke: sanirajPostavke({}), voznje: [] };
+  }
+
+  function ucitaj() {
+    var tekst, o;
+    try {
+      tekst = window.localStorage.getItem(KLJUC);
+    } catch (e) {
+      return podrazumevanoStanje();
+    }
+    if (!tekst) { return podrazumevanoStanje(); }
+    try {
+      o = JSON.parse(tekst);
+    } catch (e2) {
+      return podrazumevanoStanje();
+    }
+    if (!o || !jesteNiz(o.voznje)) { return podrazumevanoStanje(); }
+    return { verzija: 1, postavke: o.postavke || {}, voznje: o.voznje };
+  }
+
+  function sacuvaj(s) {
+    try {
+      window.localStorage.setItem(KLJUC, JSON.stringify(s));
+    } catch (e) {
+      // Privatni rezim: radi se dalje, samo bez pamcenja.
+    }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Interfejs.
+   * ------------------------------------------------------------------ */
+
+  var OZNAKE = { bicikl: '🚲', pesice: '🚶', prevoz: '🚌' };
+  var NAZIVI = { bicikl: 'Bicikl', pesice: 'Pešice', prevoz: 'Prevoz' };
+  var POLJA_POSTAVKI = ['potrosnja', 'cenaGoriva', 'trosakPoKm',
+                        'parkingPoVoznji', 'co2PoKm', 'valuta'];
+
+  var stanje = null;
+  var izabraniNacin = 'bicikl';
+
+  function el(id) { return document.getElementById(id); }
+
+  function dvocifreno(n) { return (n < 10 ? '0' : '') + n; }
+
+  function danas() {
+    var d = new Date();
+    return d.getFullYear() + '-' + dvocifreno(d.getMonth() + 1) + '-' + dvocifreno(d.getDate());
+  }
+
+  function izForme() {
+    return {
+      id: new Date().getTime(),
+      datum: el('datum').value,
+      km: uBroj(el('km').value),
+      nacin: izabraniNacin,
+      cenaKarte: izabraniNacin === 'prevoz' ? (uBroj(el('cenaKarte').value) || 0) : 0,
+      opis: el('opis').value
+    };
+  }
+
+  function osveziPregled() {
+    var p = sanirajPostavke(stanje.postavke);
+    var v = izForme();
+    var polje = el('pregled');
+    if (!isFinite(v.km) || v.km <= 0) {
+      polje.textContent = 'Ušteda: —';
+      polje.className = 'pregled';
+      return;
+    }
+    var u = usteda(v, p);
+    polje.textContent = 'Ušteda: ' + formatiraj(u, p.valuta) + '  ·  ' + formatirajKg(co2Usteda(v, p));
+    polje.className = u < 0 ? 'pregled negativno' : 'pregled';
+  }
+
+  function crtajZbirove(p) {
+    var danasnji = danas();
+    var kartice = [
+      { naziv: 'Ovaj mesec', z: zbir(filtriraj(stanje.voznje, danasnji.slice(0, 7)), p) },
+      { naziv: 'Ova godina', z: zbir(filtriraj(stanje.voznje, danasnji.slice(0, 4)), p) },
+      { naziv: 'Ukupno', z: zbir(stanje.voznje, p) }
+    ];
+    var html = '', i, k;
+    for (i = 0; i < kartice.length; i++) {
+      k = kartice[i];
+      html += '<div class="kartica zbir' + (k.z.novac < 0 ? ' negativno' : '') + '">' +
+              '<div class="naslov-zbira">' + k.naziv + '</div>' +
+              '<div class="novac">' + formatiraj(k.z.novac, p.valuta) + '</div>' +
+              '<div class="sitno">' + formatirajKm(k.z.km) + ' · ' + formatirajKg(k.z.co2) + '</div>' +
+              '</div>';
+    }
+    el('zbirovi').innerHTML = html;
+  }
+
+  function crtajIstoriju(p) {
+    if (stanje.voznje.length === 0) {
+      el('lista').innerHTML = '<p class="prazno">Još nema nijedne vožnje. Upiši prvu — ' +
+        'RadGeld sabira koliko je novca ostalo u džepu zato što auto nije korišćen.</p>';
+      return;
+    }
+    var grupe = grupisiPoMesecu(stanje.voznje, p), html = '', i, j, g, v, u;
+    for (i = 0; i < grupe.length; i++) {
+      g = grupe[i];
+      html += '<div class="mesec"><span>' + g.naziv + '</span>' +
+              '<span class="' + (g.novac < 0 ? 'negativno' : '') + '">' +
+              formatiraj(g.novac, p.valuta) + '</span></div>';
+      for (j = 0; j < g.stavke.length; j++) {
+        v = g.stavke[j];
+        u = usteda(v, p);
+        html += '<div class="red">' +
+                '<span class="oznaka">' + (OZNAKE[v.nacin] || '') + '</span>' +
+                '<span class="datum">' + bezHtml(v.datum) + '</span>' +
+                '<span class="opis">' + bezHtml(v.opis || NAZIVI[v.nacin] || '') + '</span>' +
+                '<span class="km">' + formatirajKm(v.km) + '</span>' +
+                '<span class="usteda' + (u < 0 ? ' negativno' : '') + '">' +
+                formatiraj(u, p.valuta) + '</span>' +
+                '<button type="button" class="obrisi" data-id="' + bezHtml(v.id) +
+                '" title="Obriši">×</button>' +
+                '</div>';
+      }
+    }
+    el('lista').innerHTML = html;
+  }
+
+  function prikazi() {
+    var p = sanirajPostavke(stanje.postavke);
+    crtajZbirove(p);
+    crtajIstoriju(p);
+    osveziPregled();
+  }
+
+  function pokaziGresku(poruka) {
+    var g = el('greskaUnos');
+    g.textContent = poruka;
+    g.hidden = false;
+  }
+
+  function dodajIzForme() {
+    var v = izForme();
+    if (!v.datum) { pokaziGresku('Izaberi datum.'); return; }
+    if (!isFinite(v.km) || v.km <= 0) {
+      pokaziGresku('Upiši kilometre kao pozitivan broj.');
+      return;
+    }
+    el('greskaUnos').hidden = true;
+    stanje = dodajVoznju(stanje, v);
+    sacuvaj(stanje);
+    el('km').value = '';
+    el('opis').value = '';
+    prikazi();
+  }
+
+  function izaberiNacin(nacin) {
+    izabraniNacin = nacin;
+    var dugmad = el('nacini').getElementsByTagName('button'), i;
+    for (i = 0; i < dugmad.length; i++) {
+      dugmad[i].className = dugmad[i].getAttribute('data-nacin') === nacin
+                            ? 'nacin izabran' : 'nacin';
+    }
+    el('poljeKarta').hidden = nacin !== 'prevoz';
+    osveziPregled();
+  }
+
+  function popuniPostavke() {
+    var i, ime, vrednost;
+    for (i = 0; i < POLJA_POSTAVKI.length; i++) {
+      ime = POLJA_POSTAVKI[i];
+      vrednost = stanje.postavke[ime];
+      el('p_' + ime).value = (vrednost === undefined || vrednost === null) ? '' : vrednost;
+    }
+  }
+
+  function izvezi() {
+    var tekst = JSON.stringify(stanje, null, 2);
+    var blob = new Blob([tekst], { type: 'application/json' });
+    var adresa = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = adresa;
+    a.download = 'radgeld-' + danas() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(adresa); }, 1000);
+  }
+
+  function uvezi(fajl) {
+    var citac = new FileReader();
+    citac.onload = function () {
+      var r = procitajUvoz(String(citac.result));
+      if (!r.ok) { window.alert(r.greska); return; }
+      if (!window.confirm('Uvoz briše sve što je sada zapisano. Nastaviti?')) { return; }
+      stanje = r.stanje;
+      sacuvaj(stanje);
+      popuniPostavke();
+      prikazi();
+    };
+    citac.readAsText(fajl);
+  }
+
+  function vezi() {
+    el('dodaj').addEventListener('click', dodajIzForme);
+
+    el('nacini').addEventListener('click', function (e) {
+      var nacin = e.target.getAttribute('data-nacin');
+      if (nacin) { izaberiNacin(nacin); }
+    });
+
+    var pregledna = ['km', 'cenaKarte', 'datum'], i;
+    for (i = 0; i < pregledna.length; i++) {
+      el(pregledna[i]).addEventListener('input', osveziPregled);
+    }
+
+    el('km').addEventListener('keydown', function (e) {
+      if (e.keyCode === 13) { dodajIzForme(); }
+    });
+
+    el('lista').addEventListener('click', function (e) {
+      var dugme = e.target;
+      if (!dugme || dugme.className !== 'obrisi') { return; }
+      var id = dugme.getAttribute('data-id');
+      if (!window.confirm('Obrisati ovu vožnju?')) { return; }
+      var nove = [], j;
+      for (j = 0; j < stanje.voznje.length; j++) {
+        if (String(stanje.voznje[j].id) !== String(id)) { nove.push(stanje.voznje[j]); }
+      }
+      stanje = { verzija: 1, postavke: stanje.postavke, voznje: nove };
+      sacuvaj(stanje);
+      prikazi();
+    });
+
+    for (i = 0; i < POLJA_POSTAVKI.length; i++) {
+      (function (ime) {
+        el('p_' + ime).addEventListener('input', function (e) {
+          stanje.postavke[ime] = e.target.value;
+          sacuvaj(stanje);
+          prikazi();
+        });
+      }(POLJA_POSTAVKI[i]));
+    }
+
+    el('izvezi').addEventListener('click', izvezi);
+    el('uvezi').addEventListener('click', function () { el('uvozFajl').click(); });
+    el('uvozFajl').addEventListener('change', function (e) {
+      if (e.target.files && e.target.files[0]) { uvezi(e.target.files[0]); }
+      e.target.value = '';
+    });
+  }
+
+  function pokreni() {
+    stanje = ucitaj();
+    el('datum').value = danas();
+    popuniPostavke();
+    vezi();
+    prikazi();
+  }
+
+  if (location.hash === '#test') { samoprovera(); } else { pokreni(); }
 }());
 </script>
 </body>
