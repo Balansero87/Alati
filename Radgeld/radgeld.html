@@ -380,7 +380,13 @@ pre { font: 13px/1.5 Consolas, monospace; }
     if (!o || !jesteNiz(o.voznje)) {
       return { ok: false, greska: 'That file is not a RadGeld export.' };
     }
-    return { ok: true, stanje: { verzija: 1, postavke: sanirajPostavke(o.postavke),
+    // sanirajPostavke gradi nov objekat samo od poznatih polja, pa bi vreme
+    // izmene cene ispalo iz uvoza i rezervna kopija bi se vracala sa
+    // "Not set yet" iako cena jeste bila postavljena. Prenosi se rucno.
+    var p = sanirajPostavke(o.postavke);
+    var kada = uBroj(o.postavke ? o.postavke.cenaGorivaIzmenjena : undefined);
+    if (isFinite(kada) && kada > 0) { p.cenaGorivaIzmenjena = kada; }
+    return { ok: true, stanje: { verzija: 1, postavke: p,
                                  voznje: o.voznje.slice(0, KAPA) } };
   }
 
@@ -483,6 +489,12 @@ pre { font: 13px/1.5 Consolas, monospace; }
     proveri('uvoz bez voznji polja', procitajUvoz('{"verzija":1}').ok, false);
     proveri('uvoz vraca sanirane postavke',
             procitajUvoz('{"verzija":1,"voznje":[],"postavke":{}}').stanje.postavke.potrosnja, 7.5);
+    proveri('uvoz cuva vreme izmene cene',
+            procitajUvoz('{"verzija":1,"voznje":[],"postavke":{"cenaGorivaIzmenjena":1700000000000}}')
+              .stanje.postavke.cenaGorivaIzmenjena, 1700000000000);
+    proveri('uvoz bez vremena ostaje bez vremena',
+            procitajUvoz('{"verzija":1,"voznje":[],"postavke":{}}')
+              .stanje.postavke.cenaGorivaIzmenjena === undefined, true);
 
     /* --- snimak postavki uz voznju ------------------------------------- */
 

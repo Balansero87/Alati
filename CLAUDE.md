@@ -165,13 +165,13 @@ start "" "E:\Program Files\Claude code\Radgeld\radgeld.html"
 
 ### Tests
 
-Built-in self-check: **64 assertions**, no framework, no dependencies.
+Built-in self-check: **66 assertions**, no framework, no dependencies.
 
 ```bash
 start "" "E:\Program Files\Claude code\Radgeld\radgeld.html#test"
 ```
 
-`#test` replaces the page with the results and puts `OK 64/64` or `PALO n/64`
+`#test` replaces the page with the results and puts `OK 66/66` or `PALO n/66`
 in the tab title; the runner is also exposed as `window.samoprovera()`.
 
 ### Do not undo these
