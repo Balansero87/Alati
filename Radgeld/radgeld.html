@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RadGeld</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="ikona-192.png">
+<meta name="theme-color" content="#157f3b">
 <style>
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -847,6 +850,17 @@ pre { font: 13px/1.5 Consolas, monospace; }
     popuniPostavke();
     vezi();
     prikazi();
+    prijaviRadnika();
+  }
+
+  // Servisni radnik radi samo preko http(s). Sa file:// registracija puca, pa
+  // se i ne pokusava — alat i dalje radi, samo bez ikone na pocetnom ekranu.
+  function prijaviRadnika() {
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') { return; }
+    if (!navigator.serviceWorker) { return; }
+    navigator.serviceWorker.register('sw.js').catch(function () {
+      // Neuspela registracija nije greska koju korisnik treba da vidi.
+    });
   }
 
   if (location.hash === '#test') { samoprovera(); } else { pokreni(); }

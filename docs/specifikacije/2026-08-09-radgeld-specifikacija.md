@@ -16,6 +16,12 @@ Inline CSS, jedan IIFE, ES5, nula zavisnosti, bez build koraka. **UI je na
 engleskom** — izuzetak od pravila iz `CLAUDE.md`, tražen izričito; kod i
 komentari ostaju na srpskom.
 
+Uz njega ide i PWA omotač — `manifest.webmanifest`, `sw.js` i dve PNG ikone
+(`napravi-ikone.js`) — da bi alat mogao na početni ekran telefona i radio bez
+signala. Nema druge kopije HTML-a: omotač služi baš `radgeld.html`, pa pravilo
+o dva identična fajla iz prevodioca ovde **ne** važi. Servisni radnik je
+keš-prvi i traži https (ili localhost).
+
 **Bez mreže** — nijedan `fetch`, nijedan `XMLHttpRequest`, nijedan spoljni
 resurs se ne učitava. Jedini izuzetak je obična veza ka `clever-tanken.de` u
 postavkama: ništa ne povlači i ništa ne šalje dok korisnik sam ne klikne, pa

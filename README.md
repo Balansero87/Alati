@@ -69,7 +69,9 @@ Sabira koliko je novca ostalo u džepu zato što auto nije korišćen. Upišeš 
 
 Tamo i nazad je **jedan unos** — upiši zbir kilometara.
 
-**Ne traži internet.** Nema nijednog mrežnog poziva; sve se čuva u samom browseru (`localStorage`), pa podaci ostaju na ovom računaru i u ovom browseru. Radi i offline.
+**Ne traži internet.** Nema nijednog mrežnog poziva; sve se čuva u samom browseru (`localStorage`), pa podaci ostaju na ovom uređaju i u ovom browseru. Radi i offline.
+
+**Na telefon:** uz `radgeld.html` idu `manifest.webmanifest`, `sw.js` i dve ikone, pa se alat instalira na početni ekran i radi bez signala. Za to mora da bude serviran preko **https** — servisni radnik ne radi ni sa `file://` ni sa obične http adrese u lokalnoj mreži. Ikone se prave sa `node napravi-ikone.js`.
 
 Provera ispravnosti je ugrađena — otvori fajl sa `#test` na kraju adrese.
 

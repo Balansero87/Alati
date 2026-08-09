@@ -27,7 +27,9 @@ kalkulator/       Electron desktop calculator (Windows, NSIS installer)
   kalkulator.ico    installer and window icon
 
 Radgeld/          savings tracker — money not spent on driving
-  radgeld.html      standalone, double-click to open
+  radgeld.html      standalone, double-click to open; also the PWA entry point
+  manifest.webmanifest, sw.js, ikona-192.png, ikona-512.png   PWA wrapper
+  napravi-ikone.js  generates the two PNG icons — `node napravi-ikone.js`
 
 docs/
   specifikacije/    design specs (+ the interactive mockup for smanji-slike)
@@ -176,6 +178,16 @@ in the tab title; the runner is also exposed as `window.samoprovera()`.
 
 ### Do not undo these
 
+- **Bump `KES` in `sw.js` when changing the cached file list**, or `activate`
+  will not purge the old cache. Unlike prevodilac's worker this one is
+  **cache-first**: RadGeld has nothing to fetch, so offline is the normal state,
+  not a fallback. There is no second copy of the HTML — the PWA serves
+  `radgeld.html` itself, so the byte-identical-twins rule from prevodilac does
+  not apply here and must not be introduced.
+- **The service worker is only registered over http(s)** (`prijaviRadnika`).
+  From `file://` registration throws, so it is not attempted; the tool still
+  works, just without offline install. A plain-HTTP LAN address is **not** a
+  secure context either — service workers need HTTPS or localhost.
 - **History is never recalculated.** Every ride carries `snimak`, the settings
   that were in effect when it was logged, and is always computed from it — a new
   fuel price applies only to rides added afterwards, so two rides in one list can
