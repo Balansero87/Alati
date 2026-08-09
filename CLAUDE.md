@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Three unrelated tools. Two are browser tools written as single self-contained HTML files — inline CSS, one IIFE of ES5-style JavaScript, zero dependencies, no build step, no package manager; each is meant to be opened straight from disk and to keep working on older mobile browsers. The third is an Electron desktop app and is the one exception to all of that.
+Four unrelated tools. Three are browser tools written as single self-contained HTML files — inline CSS, one IIFE of ES5-style JavaScript, zero dependencies, no build step, no package manager; each is meant to be opened straight from disk and to keep working on older mobile browsers. The fourth is an Electron desktop app and is the one exception to all of that.
 
 ```
 prevodilac/       Serbian ⇄ German translator
@@ -26,13 +26,16 @@ kalkulator/       Electron desktop calculator (Windows, NSIS installer)
   napravi-ikonu.js  generates kalkulator.ico — `npm run ikona`
   kalkulator.ico    installer and window icon
 
+Radgeld/          savings tracker — money not spent on driving
+  radgeld.html      standalone, double-click to open
+
 docs/
   specifikacije/    design specs (+ the interactive mockup for smanji-slike)
   planovi/          implementation plans
   smanji-slike-dnevnik-izrade.md   review findings and rulings from the build
 ```
 
-The three tools share nothing — no code, no assets, no conventions beyond style. Work on one without touching the others.
+The four tools share nothing — no code, no assets, no conventions beyond style. Work on one without touching the others.
 
 This **is** a git repository (branch `main`). Commit when the user asks.
 
@@ -151,14 +154,56 @@ npm run ikona      # regenerate kalkulator.ico
 - Percent is postfix "divide by 100", always (`2+3%` → `2.03`). Windows Calculator's context-sensitive percent is deliberately not implemented — reasons in the spec.
 - `kalkulator.ico` comes from `napravi-ikonu.js`. If it needs changing, edit `nacrtaj()` and rerun rather than adding an image library.
 
+## RadGeld
+
+Logs trips made by bike, on foot, or by public transport, and totals the money
+not spent on driving. Everything in `localStorage` under `radGeld.v1`.
+
+```bash
+start "" "E:\Program Files\Claude code\Radgeld\radgeld.html"
+```
+
+### Tests
+
+Built-in self-check: **43 assertions**, no framework, no dependencies.
+
+```bash
+start "" "E:\Program Files\Claude code\Radgeld\radgeld.html#test"
+```
+
+`#test` replaces the page with the results and puts `OK 43/43` or `PALO n/43`
+in the tab title; the runner is also exposed as `window.samoprovera()`.
+
+### Do not undo these
+
+- **Savings are allowed to be negative.** A transit ticket costing more than the
+  drive is a loss, shown in red and summed as-is. Clamping it to zero would make
+  every total a lie. The assertion `usteda negativna` exists to lock this.
+- **Settings are sanitised at calculation time, never while typing.**
+  `sanirajPostavke()` is called on every render; the input field and
+  `localStorage` keep the raw string. **`ucitaj()` deliberately does not
+  sanitise** — if it did, every page load would overwrite what the user typed.
+  Clearing a field to retype it must not fight the user.
+- **Money is compared through `blizu()` in the self-check**, not `===`. Rounding
+  happens only in `formatiraj`/`formatirajKm`/`formatirajKg`, at display time;
+  sums add unrounded values. Exact float comparison here tests IEEE 754, not the
+  formula.
+- **The runner catches exceptions from `sveTvrdnje()`** and turns them into a
+  failed assertion. Without it an undefined function kills the runner and the
+  page renders blank, so a red state is invisible.
+- A round trip is **one entry with doubled km** — the record has no notion of a
+  return leg, and nothing is doubled in code.
+- History is capped at 500 rides, newest first. Import replaces everything and
+  sanitises the settings it reads, because that file came from outside.
+
 ## Language conventions
 
-All three tools: UI, all user-facing strings, and all code comments are in Serbian (Latin script). Keep new code in the same style — `var`, function declarations, no ES6+ syntax, no modules, no template literals.
+All four tools: UI, all user-facing strings, and all code comments are in Serbian (Latin script). Keep new code in the same style — `var`, function declarations, no ES6+ syntax, no modules, no template literals.
 
 Check before committing. **This should print nothing** — any hit is a real violation:
 
 ```bash
-grep -nE "\blet\b|\bconst\b|=>" prevodilac/prevodilac.html smanji-slike/smanji-slike.html kalkulator/main.js kalkulator/preload.js kalkulator/skladiste.js kalkulator/renderer/*.js
+grep -nE "\blet\b|\bconst\b|=>" prevodilac/prevodilac.html smanji-slike/smanji-slike.html Radgeld/radgeld.html kalkulator/main.js kalkulator/preload.js kalkulator/skladiste.js kalkulator/renderer/*.js
 ```
 
 `\bclass\b` is deliberately out of that pattern — it matched HTML `class` attributes 42 times in one file, so nobody ever read the hits and the check became noise. Look for real classes separately when you have reason to.

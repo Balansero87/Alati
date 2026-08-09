@@ -1,6 +1,6 @@
 # RadGeld — plan izrade
 
-> **Za agente:** koraci su čekirani (`- [ ]`). Radi zadatak po zadatak, samoprovera
+> **Za agente:** koraci su čekirani (`- [x]`). Radi zadatak po zadatak, samoprovera
 > mora da prođe pre svakog komita.
 
 Datum: 2026-08-09
@@ -78,9 +78,9 @@ prikazi()                                  jedina funkcija koja crta
 Prvo runner, pa tek onda išta što on proverava — inače se prve tvrdnje pišu
 naslepo.
 
-- [ ] **Korak 1:** HTML skelet — `<meta charset="utf-8">`, `<title>RadGeld</title>`,
+- [x] **Korak 1:** HTML skelet — `<meta charset="utf-8">`, `<title>RadGeld</title>`,
       `<meta name="viewport">`, inline `<style>`, jedan `<script>` sa IIFE.
-- [ ] **Korak 2:** helper i runner unutar IIFE:
+- [x] **Korak 2:** helper i runner unutar IIFE:
 
 ```js
 var tvrdnje = [];
@@ -110,10 +110,10 @@ window.samoprovera = samoprovera;
 if (location.hash === '#test') samoprovera();
 ```
 
-- [ ] **Korak 3:** privremeno `function sveTvrdnje() { proveri('runner radi', 1, 1); }`
-- [ ] **Korak 4:** otvori `radgeld.html#test` → naslov taba mora reći `OK 1/1`.
+- [x] **Korak 3:** privremeno `function sveTvrdnje() { proveri('runner radi', 1, 1); }`
+- [x] **Korak 4:** otvori `radgeld.html#test` → naslov taba mora reći `OK 1/1`.
       Zatim namerno pokvari tvrdnju u `1, 2` i potvrdi `PALO 1/1`, pa vrati.
-- [ ] **Korak 5:** komit
+- [x] **Korak 5:** komit
 
 ```bash
 git add Radgeld/radgeld.html && git commit -m "feat(radgeld): skelet i samoprovera"
@@ -130,7 +130,7 @@ Novac se sabira u plivajućem zarezu, pa se izvedene vrednosti porede kroz
 `blizu()`. Ovo nije popuštanje testa: po specifikaciji se zaokružuje samo pri
 prikazu, pa bi tačno poređenje ovde merilo IEEE 754, a ne formulu.
 
-- [ ] **Korak 1:** napiši tvrdnje koje padaju, u `sveTvrdnje()`:
+- [x] **Korak 1:** napiši tvrdnje koje padaju, u `sveTvrdnje()`:
 
 ```js
 function blizu(a, b) { return Math.abs(a - b) < 1e-9; }
@@ -152,12 +152,12 @@ proveri('usteda negativna',
 proveri('co2 u kg', blizu(co2Usteda({ km: 10 }, P), 1.5), true);
 ```
 
-- [ ] **Korak 2:** pokreni — mora `PALO 13/13` uz „is not defined".
-- [ ] **Korak 3:** implementiraj tačno po specifikaciji. `trosakAlternative`
+- [x] **Korak 2:** pokreni — mora `PALO 13/13` uz „is not defined".
+- [x] **Korak 3:** implementiraj tačno po specifikaciji. `trosakAlternative`
       vraća `cenaKarte` samo za `'prevoz'`, inače `0`. Ušteda se **ne** seče na
       nulu — tvrdnja „usteda negativna" postoji baš zato da to zaključa.
-- [ ] **Korak 4:** pokreni — `OK 13/13`.
-- [ ] **Korak 5:** `git commit -m "feat(radgeld): formula ustede"`
+- [x] **Korak 4:** pokreni — `OK 13/13`.
+- [x] **Korak 5:** `git commit -m "feat(radgeld): formula ustede"`
 
 ---
 
@@ -167,7 +167,7 @@ Neispravna postavka ne sme da sruši račun, ali polje i `localStorage` čuvaju 
 što je korisnik ukucao — brisanje polja radi prekucavanja ne sme da se bori sa
 korisnikom. Zato se sanira **na ulazu u račun**, ne pri kucanju.
 
-- [ ] **Korak 1:** tvrdnje koje padaju:
+- [x] **Korak 1:** tvrdnje koje padaju:
 
 ```js
 proveri('prazna potrosnja -> podrazumevana', sanirajPostavke({ potrosnja: '' }).potrosnja, 7.5);
@@ -181,13 +181,13 @@ proveri('ne dira original', (function () {
 }()), -1);
 ```
 
-- [ ] **Korak 2:** pokreni, potvrdi da pada.
-- [ ] **Korak 3:** implementiraj. Podrazumevano: `potrosnja` 7.5, `cenaGoriva`
+- [x] **Korak 2:** pokreni, potvrdi da pada.
+- [x] **Korak 3:** implementiraj. Podrazumevano: `potrosnja` 7.5, `cenaGoriva`
       1.75 (moraju biti **strogo pozitivni**), `trosakPoKm` 0.10 i `co2PoKm` 150
       i `parkingPoVoznji` 0 (dozvoljena je nula, odbija se samo NaN i negativno),
       `valuta` `'€'`. Vraća **nov** objekat.
-- [ ] **Korak 4:** pokreni — sve prolazi.
-- [ ] **Korak 5:** `git commit -m "feat(radgeld): sanitizacija postavki"`
+- [x] **Korak 4:** pokreni — sve prolazi.
+- [x] **Korak 5:** `git commit -m "feat(radgeld): sanitizacija postavki"`
 
 ---
 
@@ -196,7 +196,7 @@ proveri('ne dira original', (function () {
 `blizu` i `P` su već definisani u zadatku 2 i sve tvrdnje žive u istoj
 `sveTvrdnje()` — ne definiši ih ponovo. `V` odavde koristi i zadatak 5.
 
-- [ ] **Korak 1:** tvrdnje koje padaju:
+- [x] **Korak 1:** tvrdnje koje padaju:
 
 ```js
 var V = [{ id: 3, datum: '2026-08-05', km: 10, nacin: 'bicikl', cenaKarte: 0 },
@@ -219,20 +219,20 @@ proveri('format zarez', formatiraj(3.418, '\u20AC'), '3,42 \u20AC');
 proveri('format negativan', formatiraj(-1.2, '\u20AC'), '-1,20 \u20AC');
 ```
 
-- [ ] **Korak 2:** pokreni, potvrdi pad.
-- [ ] **Korak 3:** implementiraj. `filtriraj` poredi prefiks datuma
+- [x] **Korak 2:** pokreni, potvrdi pad.
+- [x] **Korak 3:** implementiraj. `filtriraj` poredi prefiks datuma
       (`v.datum.indexOf(prefiks) === 0`) — bez `Date`, jer je datum već
       `YYYY-MM-DD` i leksičko poređenje je tačno. Nazivi meseci su niz od
       dvanaest stringova: januar…decembar. `formatiraj` koristi `toFixed(2)` pa
       zamenjuje tačku zarezom.
-- [ ] **Korak 4:** pokreni — sve prolazi.
-- [ ] **Korak 5:** `git commit -m "feat(radgeld): zbirovi i grupisanje po mesecu"`
+- [x] **Korak 4:** pokreni — sve prolazi.
+- [x] **Korak 5:** `git commit -m "feat(radgeld): zbirovi i grupisanje po mesecu"`
 
 ---
 
 ### 5. Stanje: dodavanje, kapa, čuvanje
 
-- [ ] **Korak 1:** tvrdnje koje padaju:
+- [x] **Korak 1:** tvrdnje koje padaju:
 
 ```js
 proveri('dodata je prva', dodajVoznju({ voznje: V.slice() },
@@ -249,15 +249,15 @@ proveri('uvoz vraca sanirane postavke',
         procitajUvoz('{"verzija":1,"voznje":[],"postavke":{}}').stanje.postavke.potrosnja, 7.5);
 ```
 
-- [ ] **Korak 2:** pokreni, potvrdi pad.
-- [ ] **Korak 3:** implementiraj `dodajVoznju` (novi niz, sortiran po `datum`
+- [x] **Korak 2:** pokreni, potvrdi pad.
+- [x] **Korak 3:** implementiraj `dodajVoznju` (novi niz, sortiran po `datum`
       opadajuće pa `id` opadajuće, `slice(0, 500)`) i `procitajUvoz`
       (`JSON.parse` u `try/catch`, obavezno polje `voznje` mora biti niz, inače
       `{ ok: false, greska: 'Fajl nije RadGeld izvoz.' }`).
-- [ ] **Korak 4:** dodaj `ucitaj()` i `sacuvaj()` — `localStorage` u `try/catch`,
+- [x] **Korak 4:** dodaj `ucitaj()` i `sacuvaj()` — `localStorage` u `try/catch`,
       nepostojeći ili neispravan ključ daje podrazumevano stanje umesto pada.
       Ove dve se ne testiraju tvrdnjama, proveravaju se u zadatku 8.
-- [ ] **Korak 5:** pokreni — sve prolazi. `git commit -m "feat(radgeld): stanje, kapa i uvoz"`
+- [x] **Korak 5:** pokreni — sve prolazi. `git commit -m "feat(radgeld): stanje, kapa i uvoz"`
 
 ---
 
@@ -265,61 +265,61 @@ proveri('uvoz vraca sanirane postavke',
 
 **Troši:** sve iz zadataka 2–5.
 
-- [ ] **Korak 1:** forma — datum (`<input type="date">`, podrazumevano danas),
+- [x] **Korak 1:** forma — datum (`<input type="date">`, podrazumevano danas),
       kilometri, tri dugmeta za način, opis, i **cena karte koja se prikazuje
       samo kad je način `prevoz`**.
-- [ ] **Korak 2:** ispod polja red „Ušteda: —" koji se osvežava na `input`
+- [x] **Korak 2:** ispod polja red „Ušteda: —" koji se osvežava na `input`
       događaj, kroz `usteda()` + `formatiraj()`. Negativna vrednost dobija klasu
       `negativno` (crveno).
-- [ ] **Korak 3:** dugme **Dodaj** — validira da su kilometri pozitivan broj i da
+- [x] **Korak 3:** dugme **Dodaj** — validira da su kilometri pozitivan broj i da
       datum postoji; poziva `dodajVoznju`, `sacuvaj`, `prikazi`; čisti km i opis,
       ostavlja datum i način.
-- [ ] **Korak 4:** oznaka „tamo i nazad? upiši zbir kilometara" ispod polja za
+- [x] **Korak 4:** oznaka „tamo i nazad? upiši zbir kilometara" ispod polja za
       km. Odluka je jedan unos sa duplim kilometrima — zapis **nema** polje za
       povratak i ništa se ne udvostručuje u kodu.
-- [ ] **Korak 5:** ručno u browseru: unesi 10 km biciklom, potvrdi da pregled
+- [x] **Korak 5:** ručno u browseru: unesi 10 km biciklom, potvrdi da pregled
       pokazuje očekivanu uštedu i da red uđe u listu. Osveži stranicu i potvrdi
       da je zapis preživeo.
-- [ ] **Korak 6:** `git commit -m "feat(radgeld): unos voznje sa zivim pregledom"`
+- [x] **Korak 6:** `git commit -m "feat(radgeld): unos voznje sa zivim pregledom"`
 
 ---
 
 ### 7. Interfejs: istorija, zbirovi, postavke
 
-- [ ] **Korak 1:** istorija iz `grupisiPoMesecu` — zaglavlje meseca sa zbirom, pa
+- [x] **Korak 1:** istorija iz `grupisiPoMesecu` — zaglavlje meseca sa zbirom, pa
       redovi: datum, oznaka načina, opis, km, ušteda. Prazno stanje objašnjava
       čemu alat služi.
-- [ ] **Korak 2:** brisanje reda uz `confirm()`.
-- [ ] **Korak 3:** tri kartice — ovaj mesec, ova godina, ukupno; svaka pokazuje
+- [x] **Korak 2:** brisanje reda uz `confirm()`.
+- [x] **Korak 3:** tri kartice — ovaj mesec, ova godina, ukupno; svaka pokazuje
       novac, km i kg CO₂ (`filtriraj` + `zbir`).
-- [ ] **Korak 4:** `<details>` sa postavkama; svaka promena zove `sacuvaj` pa
+- [x] **Korak 4:** `<details>` sa postavkama; svaka promena zove `sacuvaj` pa
       `prikazi`, tako da se cela istorija odmah preračuna.
-- [ ] **Korak 5:** dugmad **Izvezi** (Blob + `URL.createObjectURL`, `download`) i
+- [x] **Korak 5:** dugmad **Izvezi** (Blob + `URL.createObjectURL`, `download`) i
       **Uvezi** (`FileReader` → `procitajUvoz`, uz `confirm` jer briše sve).
-- [ ] **Korak 6:** ručno: promeni cenu goriva i potvrdi da se svi stari redovi
+- [x] **Korak 6:** ručno: promeni cenu goriva i potvrdi da se svi stari redovi
       promene. Izvezi, obriši sve, uvezi nazad, potvrdi da je stanje isto.
-- [ ] **Korak 7:** `git commit -m "feat(radgeld): istorija, zbirovi, postavke, izvoz"`
+- [x] **Korak 7:** `git commit -m "feat(radgeld): istorija, zbirovi, postavke, izvoz"`
 
 ---
 
 ### 8. Završna provera i dokumentacija
 
-- [ ] **Korak 1:** `window.samoprovera()` → mora `OK n/n`. Zapiši tačan `n`.
-- [ ] **Korak 2:** provera stila — **ovo ne sme ništa da ispiše**:
+- [x] **Korak 1:** `window.samoprovera()` → mora `OK n/n`. Zapiši tačan `n`.
+- [x] **Korak 2:** provera stila — **ovo ne sme ništa da ispiše**:
 
 ```bash
 grep -nE "\blet\b|\bconst\b|=>" Radgeld/radgeld.html
 ```
 
-- [ ] **Korak 3:** potvrdi da nema mreže — `grep -nE "fetch|XMLHttpRequest|https?://" Radgeld/radgeld.html`
+- [x] **Korak 3:** potvrdi da nema mreže — `grep -nE "fetch|XMLHttpRequest|https?://" Radgeld/radgeld.html`
       sme da pogodi samo blok sa uputstvom za osvežavanje u komentaru, ako je tu.
-- [ ] **Korak 4:** `README.md` — sekcija (šta radi, putanja, **radi bez
+- [x] **Korak 4:** `README.md` — sekcija (šta radi, putanja, **radi bez
       interneta**) i red u tabeli „Šta je gde".
-- [ ] **Korak 5:** `CLAUDE.md` — uvod više ne kaže „tri alata"; dodaj sekciju
+- [x] **Korak 5:** `CLAUDE.md` — uvod više ne kaže „tri alata"; dodaj sekciju
       RadGeld sa tačnim brojem tvrdnji i pravilima koja se ne smeju poništiti
       (ušteda sme da bude negativna; sanira se pri računu, ne pri kucanju).
-- [ ] **Korak 6:** u planu čekiraj sve i dopiši ishod svakog zadatka.
-- [ ] **Korak 7:** `git commit -m "docs: RadGeld u README i CLAUDE.md"`
+- [x] **Korak 6:** u planu čekiraj sve i dopiši ishod svakog zadatka.
+- [x] **Korak 7:** `git commit -m "docs: RadGeld u README i CLAUDE.md"`
 
 ---
 
@@ -329,6 +329,39 @@ Specifikacija ovo ne traži. Ako zatreba: `napravi-ikonu.js` po uzoru na
 kalkulatorov (bez biblioteke za slike) i prečica sa
 `chrome.exe --app=file:///.../Radgeld/radgeld.html`. Prečica tvrdo kodira
 apsolutnu putanju — ako se fajl pomeri, pravi se ponovo.
+
+## Ishod
+
+Sve je napravljeno 2026-08-09. Samoprovera: **OK 43/43**.
+
+- **1–5 (logika).** Crveno stanje je stvarno viđeno pre implementacije:
+  `PALO 1/3` uz „uBroj is not defined". Posle implementacije `OK 41/41`.
+  Dva odstupanja od plana, oba svesna:
+  - runner iz plana ne hvata izuzetak iz `sveTvrdnje()`, pa nedefinisana
+    funkcija sruši runner i stranica ostane prazna — crveno stanje se ne vidi.
+    Dodat je `try/catch` koji izuzetak pretvara u tvrdnju koja je pala.
+  - zadaci 1–5 su komitovani zajedno, a ne u pet komita: napisani su kao jedan
+    crveno → zeleno ciklus.
+- **6–7 (interfejs).** Dodate su `formatirajKm` i `formatirajKg` (nisu bile u
+  mapi funkcija) sa po jednom tvrdnjom — otuda 43 umesto 41.
+  `ucitaj()` **ne** sanira postavke; da sanira, svako otvaranje stranice bi
+  prepisalo ono što je korisnik ukucao. Provereno kroz pravu stranicu preko
+  refova pristupačnosti: „12,5" se čita kao 12.5; karta od 5 na 1 km daje
+  −4,77 € i crvenu klasu; stanje preživi osvežavanje; promena cene goriva na 3
+  odmah preračuna i redove i zbirove; prazna potrošnja ostaje prazna u polju i
+  u skladištu, a račun uzme 7.5; brisanje reda skida i zapis iz skladišta.
+  Konzola bez ijedne greške.
+- **8 (dokumentacija).** `README.md` i `CLAUDE.md` osveženi.
+- **9 (ikona).** Nije rađeno — opciono i nije traženo.
+
+**Nije urađeno:** folder se i dalje zove `RadGeld/`, ne `Radgeld/`.
+Preimenovanje ne prolazi dok je to radni direktorijum sesije; komanda je gore
+pod „Uslov pre početka". Fajl unutra je već `radgeld.html`, pa preimenovanje
+foldera ne dira ništa drugo.
+
+**Nije provereno u browseru:** izvoz i uvoz fajla. Logika je pokrivena
+tvrdnjama (`procitajUvoz`, četiri komada), ali pravo preuzimanje fajla i
+biranje kroz sistemski dijalog nisu odrađeni.
 
 ## Šta se menja van foldera `Radgeld/`
 

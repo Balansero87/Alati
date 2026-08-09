@@ -1,6 +1,6 @@
 # Alati
 
-Mali alati bez naloga, bez servera i bez pretplate. Dva rade u browseru i svaki je **jedan HTML fajl** — dvoklik pa radi. Treći je pravi Windows program sa instalerom.
+Mali alati bez naloga, bez servera i bez pretplate. Tri rade u browseru i svaki je **jedan HTML fajl** — dvoklik pa radi. Četvrti je pravi Windows program sa instalerom.
 
 ## Prevodilac SR ⇄ DE
 
@@ -53,6 +53,25 @@ Gotov `.exe` završi u `kalkulator/izlaz/`. Instaler nije digitalno potpisan, pa
 Da se aplikacija samo pokrene, bez pravljenja instalera: `npm start`.
 Provera ispravnosti: `npm test`.
 
+## RadGeld
+
+`Radgeld/radgeld.html`
+
+Sabira koliko je novca ostalo u džepu zato što auto nije korišćen. Upišeš vožnju — biciklom, pešice ili gradskim prevozom — a alat izračuna koliko bi ista relacija koštala autom.
+
+- Cena po kilometru se računa iz tvoje potrošnje, cene goriva i ostalih troškova
+- Kod gradskog prevoza se cena karte oduzima; ako je karta skuplja od vožnje autom, **ušteda je negativna i piše crveno** — zbir tako ostaje pošten
+- Istorija je grupisana po mesecu, sa zbirom u zaglavlju
+- Zbirovi za ovaj mesec, ovu godinu i ukupno, u novcu, kilometrima i kg CO₂
+- Promena bilo koje postavke odmah preračunava celu istoriju
+- Izvoz i uvoz svega u jedan JSON fajl
+
+Tamo i nazad je **jedan unos** — upiši zbir kilometara.
+
+**Ne traži internet.** Nema nijednog mrežnog poziva; sve se čuva u samom browseru (`localStorage`), pa podaci ostaju na ovom računaru i u ovom browseru. Radi i offline.
+
+Provera ispravnosti je ugrađena — otvori fajl sa `#test` na kraju adrese.
+
 ## Šta je gde
 
 | Putanja | Šta je |
@@ -60,6 +79,7 @@ Provera ispravnosti: `npm test`.
 | `prevodilac/` | prevodilac, standalone + PWA verzija |
 | `smanji-slike/` | alat za slike, plus ikona za prečicu |
 | `kalkulator/` | Electron aplikacija, izvorni kod i ikona za instaler |
+| `Radgeld/` | računica ušteđenog novca kad se ne vozi auto |
 | `docs/specifikacije/` | šta je trebalo napraviti i zašto tako |
 | `docs/planovi/` | kako je građeno, korak po korak |
 | `docs/smanji-slike-dnevnik-izrade.md` | nalazi recenzija i odluke tokom izrade |
