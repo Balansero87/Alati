@@ -192,7 +192,7 @@ pre { font: 13px/1.5 Consolas, monospace; }
    * Ciste funkcije. Bez DOM-a, bez localStorage — sve odavde se testira.
    * ------------------------------------------------------------------ */
 
-  var PODRAZUMEVANE = { potrosnja: 7.5, cenaGoriva: 1.75, trosakPoKm: 0.10,
+  var PODRAZUMEVANE = { potrosnja: 7.5, cenaGoriva: 2.20, trosakPoKm: 0.10,
                         parkingPoVoznji: 0, co2PoKm: 150, valuta: '€' };
 
   var MESECI = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -439,6 +439,7 @@ pre { font: 13px/1.5 Consolas, monospace; }
     proveri('smece u parkingu -> nula', sanirajPostavke({ parkingPoVoznji: 'abc' }).parkingPoVoznji, 0);
     proveri('valuta prazna -> evro', sanirajPostavke({ valuta: '' }).valuta, '€');
     proveri('zarez u ceni goriva', sanirajPostavke({ cenaGoriva: '1,75' }).cenaGoriva, 1.75);
+    proveri('podrazumevana cena goriva', sanirajPostavke({}).cenaGoriva, 2.20);
     proveri('ne dira original', (function () {
       var p = { potrosnja: -1 }; sanirajPostavke(p); return p.potrosnja;
     }()), -1);
@@ -500,9 +501,13 @@ pre { font: 13px/1.5 Consolas, monospace; }
             blizu(co2Usteda({ km: 10, snimak: { co2PoKm: 90 } }, P), 0.9), true);
     proveri('zbir mesa snimljene i nesnimljene',
             blizu(zbir([saSnimkom, { km: 10, nacin: 'bicikl' }], P).novac, 2.8 + 3.6), true);
+    // Namerno preko PODRAZUMEVANE, a ne preko brojeva: ova tvrdnja proverava
+    // da prazan snimak pada na podrazumevano, ne koliko to iznosi. Sam broj
+    // drzi tvrdnja "podrazumevana cena goriva".
     proveri('nepotpun snimak se sanira',
             blizu(usteda({ km: 10, nacin: 'bicikl', snimak: {} }, P),
-                  10 * (7.5 / 100 * 1.75 + 0.10)), true);
+                  10 * (PODRAZUMEVANE.potrosnja / 100 * PODRAZUMEVANE.cenaGoriva +
+                        PODRAZUMEVANE.trosakPoKm)), true);
 
     /* --- starost cene goriva ------------------------------------------- */
 

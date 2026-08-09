@@ -31,7 +31,7 @@ Jedan objekat:
   verzija: 1,
   postavke: {
     potrosnja: 7.5,      // l/100 km
-    cenaGoriva: 1.75,    // po litru
+    cenaGoriva: 2.20,    // po litru
     trosakPoKm: 0.10,    // održavanje, gume, amortizacija
     parkingPoVoznji: 0,  // fiksno po vožnji autom
     co2PoKm: 150,        // g/km, za informativni prikaz
