@@ -32,6 +32,9 @@ input:focus { outline: 2px solid #2f6fdb; outline-offset: -1px; border-color: #2
 .nacin.izabran { background: #2f6fdb; border-color: #2f6fdb; color: #fff; }
 
 .savet { font-size: 12px; color: #78838d; margin: 4px 0 10px; }
+.starost { font-size: 12px; color: #78838d; margin: -4px 0 12px; }
+.starost.upozorenje { color: #c2610a; font-weight: 600; }
+.starost a { color: #2f6fdb; margin-left: 6px; font-weight: 400; }
 .pregled { font-size: 18px; font-weight: 600; margin: 6px 0 10px; }
 .greska { color: #b3261e; margin: 0 0 10px; font-size: 13px; }
 .glavno { font: inherit; font-weight: 600; padding: 10px 18px; border: 0;
@@ -76,6 +79,8 @@ pre { font: 13px/1.5 Consolas, monospace; }
   .mesec { border-color: #2f363c; }
   .red { border-color: #23282c; }
   .negativno, .negativno .novac { color: #ff8a80; }
+  .starost.upozorenje { color: #ffb26b; }
+  .starost a { color: #7aa7f0; }
 }
 </style>
 </head>
@@ -83,53 +88,56 @@ pre { font: 13px/1.5 Consolas, monospace; }
 
 <header>
   <h1>RadGeld</h1>
-  <p class="podnaslov">Koliko je novca ostalo u džepu zato što auto nije korišćen</p>
+  <p class="podnaslov">How much money stayed in your pocket because the car stayed parked</p>
 </header>
 
 <main>
 
 <section class="kartica">
-  <h2>Nova vožnja</h2>
+  <h2>New trip</h2>
   <div class="mreza">
-    <label class="polje">Datum<input type="date" id="datum"></label>
-    <label class="polje">Kilometri<input type="text" id="km" inputmode="decimal" placeholder="npr. 12,5"></label>
+    <label class="polje">Date<input type="date" id="datum"></label>
+    <label class="polje">Distance (km)<input type="text" id="km" inputmode="decimal" placeholder="e.g. 12,5"></label>
   </div>
   <div class="nacini" id="nacini">
-    <button type="button" class="nacin izabran" data-nacin="bicikl">🚲 Bicikl</button>
-    <button type="button" class="nacin" data-nacin="pesice">🚶 Pešice</button>
-    <button type="button" class="nacin" data-nacin="prevoz">🚌 Prevoz</button>
+    <button type="button" class="nacin izabran" data-nacin="bicikl">🚲 Bike</button>
+    <button type="button" class="nacin" data-nacin="pesice">🚶 Walk</button>
+    <button type="button" class="nacin" data-nacin="prevoz">🚌 Transit</button>
   </div>
   <div class="mreza">
-    <label class="polje" id="poljeKarta" hidden>Cena karte<input type="text" id="cenaKarte" inputmode="decimal" placeholder="npr. 1,20"></label>
-    <label class="polje">Opis (opciono)<input type="text" id="opis" placeholder="npr. do posla"></label>
+    <label class="polje" id="poljeKarta" hidden>Ticket price<input type="text" id="cenaKarte" inputmode="decimal" placeholder="e.g. 1,20"></label>
+    <label class="polje">Description (optional)<input type="text" id="opis" placeholder="e.g. to work"></label>
   </div>
-  <p class="savet">Tamo i nazad? Upiši zbir kilometara — jedan unos je cela vožnja.</p>
-  <p class="pregled" id="pregled">Ušteda: —</p>
+  <p class="savet">Round trip? Enter the total distance — one entry is the whole trip.</p>
+  <p class="pregled" id="pregled">Saved: —</p>
   <p class="greska" id="greskaUnos" hidden></p>
-  <button type="button" class="glavno" id="dodaj">Dodaj vožnju</button>
+  <button type="button" class="glavno" id="dodaj">Add trip</button>
 </section>
 
 <section class="zbirovi" id="zbirovi"></section>
 
 <section class="kartica">
-  <h2>Istorija</h2>
+  <h2>History</h2>
   <div id="lista"></div>
 </section>
 
 <details class="kartica">
-  <summary>Postavke</summary>
+  <summary>Settings</summary>
   <div class="mreza mreza-postavke">
-    <label class="polje">Potrošnja (l/100 km)<input type="text" id="p_potrosnja" inputmode="decimal"></label>
-    <label class="polje">Cena goriva (po litru)<input type="text" id="p_cenaGoriva" inputmode="decimal"></label>
-    <label class="polje">Ostali trošak po km<input type="text" id="p_trosakPoKm" inputmode="decimal"></label>
-    <label class="polje">Parking po vožnji<input type="text" id="p_parkingPoVoznji" inputmode="decimal"></label>
-    <label class="polje">CO₂ (g/km)<input type="text" id="p_co2PoKm" inputmode="decimal"></label>
-    <label class="polje">Valuta<input type="text" id="p_valuta"></label>
+    <label class="polje">Consumption (l/100 km)<input type="text" id="p_potrosnja" inputmode="decimal"></label>
+    <label class="polje">Fuel price (per litre)<input type="text" id="p_cenaGoriva" inputmode="decimal"></label>
   </div>
-  <p class="savet">Prazno ili neispravno polje se u računu broji kao podrazumevana vrednost, a ostaje zapisano onako kako si ga ukucao. Promena bilo koje postavke odmah preračunava celu istoriju.</p>
+  <p class="starost" id="starostCene"></p>
+  <div class="mreza mreza-postavke">
+    <label class="polje">Other cost per km<input type="text" id="p_trosakPoKm" inputmode="decimal"></label>
+    <label class="polje">Parking per trip<input type="text" id="p_parkingPoVoznji" inputmode="decimal"></label>
+    <label class="polje">CO₂ (g/km)<input type="text" id="p_co2PoKm" inputmode="decimal"></label>
+    <label class="polje">Currency<input type="text" id="p_valuta"></label>
+  </div>
+  <p class="savet">An empty or invalid field counts as the default in the calculation, and stays saved exactly as you typed it. New settings apply to trips you add from now on — trips already logged keep the prices that were in effect when you logged them.</p>
   <div class="red-dugmadi">
-    <button type="button" id="izvezi">Izvezi</button>
-    <button type="button" id="uvezi">Uvezi</button>
+    <button type="button" id="izvezi">Export</button>
+    <button type="button" id="uvezi">Import</button>
     <input type="file" id="uvozFajl" accept=".json,application/json" hidden>
   </div>
 </details>
@@ -187,10 +195,13 @@ pre { font: 13px/1.5 Consolas, monospace; }
   var PODRAZUMEVANE = { potrosnja: 7.5, cenaGoriva: 1.75, trosakPoKm: 0.10,
                         parkingPoVoznji: 0, co2PoKm: 150, valuta: '€' };
 
-  var MESECI = ['januar', 'februar', 'mart', 'april', 'maj', 'jun',
-                'jul', 'avgust', 'septembar', 'oktobar', 'novembar', 'decembar'];
+  var MESECI = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
 
   var KAPA = 500;
+
+  // Preko ovoliko dana cena goriva se smatra zastarelom.
+  var PRAG_DANA = 30;
 
   // Prihvata i zarez i tacku jer se kod nas kuca zarez. Prazno je NaN, ne nula.
   function uBroj(x) {
@@ -230,7 +241,18 @@ pre { font: 13px/1.5 Consolas, monospace; }
 
   function cenaAutaPoKm(p) { return cenaGorivaPoKm(p) + p.trosakPoKm; }
 
-  function trosakAutom(v, p) { return v.km * cenaAutaPoKm(p) + p.parkingPoVoznji; }
+  // Voznja nosi snimak postavki koje su vazile kad je upisana. Istorija se
+  // zbog toga ne menja kad se kasnije promeni cena goriva — ono sto se vec
+  // desilo desilo se po tadasnjoj ceni. Voznja bez snimka (zapis stariji od
+  // ove izmene) pada nazad na trenutne postavke umesto da pukne.
+  function postavkeZa(v, p) {
+    return v.snimak ? sanirajPostavke(v.snimak) : p;
+  }
+
+  function trosakAutom(v, p) {
+    var q = postavkeZa(v, p);
+    return v.km * cenaAutaPoKm(q) + q.parkingPoVoznji;
+  }
 
   function trosakAlternative(v) {
     return v.nacin === 'prevoz' ? (uBroj(v.cenaKarte) || 0) : 0;
@@ -240,7 +262,10 @@ pre { font: 13px/1.5 Consolas, monospace; }
   // tako se i prikazuje. Secenje na nulu bi lagalo u zbirovima.
   function usteda(v, p) { return trosakAutom(v, p) - trosakAlternative(v); }
 
-  function co2Usteda(v, p) { return v.km * p.co2PoKm / 1000; }
+  function co2Usteda(v, p) {
+    var q = postavkeZa(v, p);
+    return v.km * q.co2PoKm / 1000;
+  }
 
   function zbir(voznje, p) {
     var novac = 0, km = 0, co2 = 0, i;
@@ -263,7 +288,7 @@ pre { font: 13px/1.5 Consolas, monospace; }
 
   function nazivMeseca(kljuc) {
     var mesec = parseInt(kljuc.slice(5, 7), 10);
-    return MESECI[mesec - 1] + ' ' + kljuc.slice(0, 4) + '.';
+    return MESECI[mesec - 1] + ' ' + kljuc.slice(0, 4);
   }
 
   function grupisiPoMesecu(voznje, p) {
@@ -287,6 +312,38 @@ pre { font: 13px/1.5 Consolas, monospace; }
   function formatiraj(broj, valuta) {
     var n = isFinite(broj) ? broj : 0;
     return n.toFixed(2).replace('.', ',') + ' ' + valuta;
+  }
+
+  // Racuna se po kalendarskim danima, ne po 24 sata: cena postavljena sinoc u
+  // 23h je "juce", ne "danas", bez obzira sto je proslo dva sata.
+  function uPonoc(ms) {
+    var d = new Date(ms);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+
+  function danaOd(odMs, sadaMs) {
+    return Math.round((uPonoc(sadaMs) - uPonoc(odMs)) / 86400000);
+  }
+
+  function starostCene(izmenjena, sadaMs) {
+    var broj = uBroj(izmenjena);
+    // Nikad postavljena, ili zapis iz vremena pre nego sto se vreme pamtilo:
+    // podrazumevana cena se broji kao zastarela odmah.
+    if (!isFinite(broj) || broj <= 0) {
+      return { poznato: false, dana: null, zastarelo: true };
+    }
+    var dana = danaOd(broj, sadaMs);
+    if (dana < 0) { dana = 0; }
+    return { poznato: true, dana: dana, zastarelo: dana > PRAG_DANA };
+  }
+
+  function tekstStarosti(s) {
+    if (!s.poznato) { return 'Not set yet'; }
+    if (s.zastarelo) { return 'Price is ' + s.dana + ' days old — please check'; }
+    if (s.dana === 0) { return 'Last updated today'; }
+    if (s.dana === 1) { return 'Last updated yesterday'; }
+    return 'Last updated ' + s.dana + ' days ago';
   }
 
   function formatirajKm(broj) {
@@ -318,13 +375,31 @@ pre { font: 13px/1.5 Consolas, monospace; }
     try {
       o = JSON.parse(tekst);
     } catch (e) {
-      return { ok: false, greska: 'Fajl nije ispravan JSON.' };
+      return { ok: false, greska: 'That file is not valid JSON.' };
     }
     if (!o || !jesteNiz(o.voznje)) {
-      return { ok: false, greska: 'Fajl nije RadGeld izvoz.' };
+      return { ok: false, greska: 'That file is not a RadGeld export.' };
     }
     return { ok: true, stanje: { verzija: 1, postavke: sanirajPostavke(o.postavke),
                                  voznje: o.voznje.slice(0, KAPA) } };
+  }
+
+  // Zapisi napravljeni pre nego sto je snimak postojao dobijaju snimak
+  // trenutnih postavki, jednom, pri prvom ucitavanju. Od tog trenutka su i
+  // oni zamrznuti. Vreme izmene cene se NE izmislja — ne znamo ga, pa ostaje
+  // prazno i cena se prikazuje kao nepostavljena.
+  function migriraj(s) {
+    var trenutne = sanirajPostavke(s.postavke), lista = [], i, v;
+    for (i = 0; i < s.voznje.length; i++) {
+      v = s.voznje[i];
+      if (v && !v.snimak) {
+        lista.push({ id: v.id, datum: v.datum, opis: v.opis, km: v.km,
+                     nacin: v.nacin, cenaKarte: v.cenaKarte, snimak: trenutne });
+      } else {
+        lista.push(v);
+      }
+    }
+    return { verzija: 1, postavke: s.postavke, voznje: lista };
   }
 
   function bezHtml(s) {
@@ -384,7 +459,7 @@ pre { font: 13px/1.5 Consolas, monospace; }
     proveri('zbir praznog', zbir([], P), { novac: 0, km: 0, co2: 0 });
     proveri('grupa broj meseci', grupisiPoMesecu(V, P).length, 2);
     proveri('grupa najnoviji prvi', grupisiPoMesecu(V, P)[0].kljuc, '2026-08');
-    proveri('naziv meseca', grupisiPoMesecu(V, P)[0].naziv, 'avgust 2026.');
+    proveri('naziv meseca', grupisiPoMesecu(V, P)[0].naziv, 'August 2026');
     proveri('zbir grupe', blizu(grupisiPoMesecu(V, P)[0].novac, 5.64), true);
     proveri('format zarez', formatiraj(3.418, '€'), '3,42 €');
     proveri('format negativan', formatiraj(-1.2, '€'), '-1,20 €');
@@ -407,6 +482,65 @@ pre { font: 13px/1.5 Consolas, monospace; }
     proveri('uvoz bez voznji polja', procitajUvoz('{"verzija":1}').ok, false);
     proveri('uvoz vraca sanirane postavke',
             procitajUvoz('{"verzija":1,"voznje":[],"postavke":{}}').stanje.postavke.potrosnja, 7.5);
+
+    /* --- snimak postavki uz voznju ------------------------------------- */
+
+    // Jeftinije gorivo u snimku nego u trenutnim postavkama: racun mora da
+    // uzme snimak, inace bi promena cene menjala ono sto se vec desilo.
+    var jeftino = { potrosnja: 8, cenaGoriva: 1, trosakPoKm: 0.1,
+                    parkingPoVoznji: 1, co2PoKm: 150, valuta: '€' };
+    var saSnimkom = { id: 1, datum: '2026-08-05', km: 10, nacin: 'bicikl',
+                      cenaKarte: 0, snimak: jeftino };
+
+    proveri('snimak pobedjuje trenutne postavke',
+            blizu(usteda(saSnimkom, P), 10 * (0.08 + 0.1) + 1), true);
+    proveri('bez snimka se koriste trenutne postavke',
+            blizu(usteda({ km: 10, nacin: 'bicikl' }, P), 3.6), true);
+    proveri('snimak vazi i za co2',
+            blizu(co2Usteda({ km: 10, snimak: { co2PoKm: 90 } }, P), 0.9), true);
+    proveri('zbir mesa snimljene i nesnimljene',
+            blizu(zbir([saSnimkom, { km: 10, nacin: 'bicikl' }], P).novac, 2.8 + 3.6), true);
+    proveri('nepotpun snimak se sanira',
+            blizu(usteda({ km: 10, nacin: 'bicikl', snimak: {} }, P),
+                  10 * (7.5 / 100 * 1.75 + 0.10)), true);
+
+    /* --- starost cene goriva ------------------------------------------- */
+
+    var SADA = new Date(2026, 7, 9, 12, 0, 0).getTime();
+    function preDana(n) { return new Date(2026, 7, 9 - n, 8, 0, 0).getTime(); }
+
+    proveri('cena nikad postavljena', starostCene(undefined, SADA),
+            { poznato: false, dana: null, zastarelo: true });
+    proveri('prazan zapis iz starih podataka', starostCene('', SADA).zastarelo, true);
+    proveri('danas je nula dana', starostCene(preDana(0), SADA).dana, 0);
+    proveri('sinoc je jedan dan', starostCene(preDana(1), SADA).dana, 1);
+    proveri('trideset dana nije zastarelo', starostCene(preDana(30), SADA).zastarelo, false);
+    proveri('trideset prvi dan jeste', starostCene(preDana(31), SADA).zastarelo, true);
+    proveri('vreme unapred se broji kao danas', starostCene(SADA + 86400000, SADA).dana, 0);
+
+    proveri('tekst nije postavljeno', tekstStarosti(starostCene(null, SADA)), 'Not set yet');
+    proveri('tekst danas', tekstStarosti(starostCene(preDana(0), SADA)), 'Last updated today');
+    proveri('tekst juce', tekstStarosti(starostCene(preDana(1), SADA)), 'Last updated yesterday');
+    proveri('tekst vise dana', tekstStarosti(starostCene(preDana(5), SADA)), 'Last updated 5 days ago');
+    proveri('tekst zastarelo', tekstStarosti(starostCene(preDana(45), SADA)),
+            'Price is 45 days old — please check');
+
+    /* --- migracija ------------------------------------------------------ */
+
+    proveri('migracija dodaje snimak', (function () {
+      var s = migriraj({ verzija: 1, postavke: { cenaGoriva: 2 },
+                         voznje: [{ id: 1, km: 5, nacin: 'bicikl' }] });
+      return s.voznje[0].snimak.cenaGoriva;
+    }()), 2);
+    proveri('migracija ne dira postojeci snimak', (function () {
+      var s = migriraj({ verzija: 1, postavke: { cenaGoriva: 2 },
+                         voznje: [{ id: 1, km: 5, nacin: 'bicikl', snimak: jeftino }] });
+      return s.voznje[0].snimak.cenaGoriva;
+    }()), 1);
+    proveri('migracija ne izmislja vreme izmene', (function () {
+      var s = migriraj({ verzija: 1, postavke: {}, voznje: [] });
+      return s.postavke.cenaGorivaIzmenjena === undefined;
+    }()), true);
 
     /* --- pomocno ------------------------------------------------------- */
 
@@ -439,7 +573,7 @@ pre { font: 13px/1.5 Consolas, monospace; }
       return podrazumevanoStanje();
     }
     if (!o || !jesteNiz(o.voznje)) { return podrazumevanoStanje(); }
-    return { verzija: 1, postavke: o.postavke || {}, voznje: o.voznje };
+    return migriraj({ verzija: 1, postavke: o.postavke || {}, voznje: o.voznje });
   }
 
   function sacuvaj(s) {
@@ -455,7 +589,8 @@ pre { font: 13px/1.5 Consolas, monospace; }
    * ------------------------------------------------------------------ */
 
   var OZNAKE = { bicikl: '🚲', pesice: '🚶', prevoz: '🚌' };
-  var NAZIVI = { bicikl: 'Bicikl', pesice: 'Pešice', prevoz: 'Prevoz' };
+  var NAZIVI = { bicikl: 'Bike', pesice: 'Walk', prevoz: 'Transit' };
+  var VEZA_CENE = 'https://www.clever-tanken.de/';
   var POLJA_POSTAVKI = ['potrosnja', 'cenaGoriva', 'trosakPoKm',
                         'parkingPoVoznji', 'co2PoKm', 'valuta'];
 
@@ -478,7 +613,8 @@ pre { font: 13px/1.5 Consolas, monospace; }
       km: uBroj(el('km').value),
       nacin: izabraniNacin,
       cenaKarte: izabraniNacin === 'prevoz' ? (uBroj(el('cenaKarte').value) || 0) : 0,
-      opis: el('opis').value
+      opis: el('opis').value,
+      snimak: sanirajPostavke(stanje.postavke)
     };
   }
 
@@ -487,21 +623,21 @@ pre { font: 13px/1.5 Consolas, monospace; }
     var v = izForme();
     var polje = el('pregled');
     if (!isFinite(v.km) || v.km <= 0) {
-      polje.textContent = 'Ušteda: —';
+      polje.textContent = 'Saved: —';
       polje.className = 'pregled';
       return;
     }
     var u = usteda(v, p);
-    polje.textContent = 'Ušteda: ' + formatiraj(u, p.valuta) + '  ·  ' + formatirajKg(co2Usteda(v, p));
+    polje.textContent = 'Saved: ' + formatiraj(u, p.valuta) + '  ·  ' + formatirajKg(co2Usteda(v, p));
     polje.className = u < 0 ? 'pregled negativno' : 'pregled';
   }
 
   function crtajZbirove(p) {
     var danasnji = danas();
     var kartice = [
-      { naziv: 'Ovaj mesec', z: zbir(filtriraj(stanje.voznje, danasnji.slice(0, 7)), p) },
-      { naziv: 'Ova godina', z: zbir(filtriraj(stanje.voznje, danasnji.slice(0, 4)), p) },
-      { naziv: 'Ukupno', z: zbir(stanje.voznje, p) }
+      { naziv: 'This month', z: zbir(filtriraj(stanje.voznje, danasnji.slice(0, 7)), p) },
+      { naziv: 'This year', z: zbir(filtriraj(stanje.voznje, danasnji.slice(0, 4)), p) },
+      { naziv: 'All time', z: zbir(stanje.voznje, p) }
     ];
     var html = '', i, k;
     for (i = 0; i < kartice.length; i++) {
@@ -517,8 +653,8 @@ pre { font: 13px/1.5 Consolas, monospace; }
 
   function crtajIstoriju(p) {
     if (stanje.voznje.length === 0) {
-      el('lista').innerHTML = '<p class="prazno">Još nema nijedne vožnje. Upiši prvu — ' +
-        'RadGeld sabira koliko je novca ostalo u džepu zato što auto nije korišćen.</p>';
+      el('lista').innerHTML = '<p class="prazno">No trips yet. Add the first one — ' +
+        'RadGeld adds up the money you kept by leaving the car parked.</p>';
       return;
     }
     var grupe = grupisiPoMesecu(stanje.voznje, p), html = '', i, j, g, v, u;
@@ -538,17 +674,27 @@ pre { font: 13px/1.5 Consolas, monospace; }
                 '<span class="usteda' + (u < 0 ? ' negativno' : '') + '">' +
                 formatiraj(u, p.valuta) + '</span>' +
                 '<button type="button" class="obrisi" data-id="' + bezHtml(v.id) +
-                '" title="Obriši">×</button>' +
+                '" title="Delete">×</button>' +
                 '</div>';
       }
     }
     el('lista').innerHTML = html;
   }
 
+  function crtajStarost() {
+    var s = starostCene(stanje.postavke.cenaGorivaIzmenjena, new Date().getTime());
+    var red = el('starostCene');
+    red.className = s.zastarelo ? 'starost upozorenje' : 'starost';
+    red.innerHTML = bezHtml(tekstStarosti(s)) +
+      ' <a href="' + VEZA_CENE + '" target="_blank" rel="noopener noreferrer">' +
+      'Current prices at clever-tanken.de</a>';
+  }
+
   function prikazi() {
     var p = sanirajPostavke(stanje.postavke);
     crtajZbirove(p);
     crtajIstoriju(p);
+    crtajStarost();
     osveziPregled();
   }
 
@@ -560,9 +706,9 @@ pre { font: 13px/1.5 Consolas, monospace; }
 
   function dodajIzForme() {
     var v = izForme();
-    if (!v.datum) { pokaziGresku('Izaberi datum.'); return; }
+    if (!v.datum) { pokaziGresku('Pick a date.'); return; }
     if (!isFinite(v.km) || v.km <= 0) {
-      pokaziGresku('Upiši kilometre kao pozitivan broj.');
+      pokaziGresku('Enter the distance as a positive number.');
       return;
     }
     el('greskaUnos').hidden = true;
@@ -611,7 +757,7 @@ pre { font: 13px/1.5 Consolas, monospace; }
     citac.onload = function () {
       var r = procitajUvoz(String(citac.result));
       if (!r.ok) { window.alert(r.greska); return; }
-      if (!window.confirm('Uvoz briše sve što je sada zapisano. Nastaviti?')) { return; }
+      if (!window.confirm('Importing replaces everything saved now. Continue?')) { return; }
       stanje = r.stanje;
       sacuvaj(stanje);
       popuniPostavke();
@@ -641,7 +787,7 @@ pre { font: 13px/1.5 Consolas, monospace; }
       var dugme = e.target;
       if (!dugme || dugme.className !== 'obrisi') { return; }
       var id = dugme.getAttribute('data-id');
-      if (!window.confirm('Obrisati ovu vožnju?')) { return; }
+      if (!window.confirm('Delete this trip?')) { return; }
       var nove = [], j;
       for (j = 0; j < stanje.voznje.length; j++) {
         if (String(stanje.voznje[j].id) !== String(id)) { nove.push(stanje.voznje[j]); }
@@ -655,6 +801,11 @@ pre { font: 13px/1.5 Consolas, monospace; }
       (function (ime) {
         el('p_' + ime).addEventListener('input', function (e) {
           stanje.postavke[ime] = e.target.value;
+          // Vreme se pamti samo za cenu goriva i samo kad je korisnik menja
+          // rukom — zato ovde, a ne u sacuvaj().
+          if (ime === 'cenaGoriva') {
+            stanje.postavke.cenaGorivaIzmenjena = new Date().getTime();
+          }
           sacuvaj(stanje);
           prikazi();
         });
@@ -671,6 +822,10 @@ pre { font: 13px/1.5 Consolas, monospace; }
 
   function pokreni() {
     stanje = ucitaj();
+    // Migracija se odmah upisuje. Bez ovoga bi snimci postojali samo u
+    // memoriji, pa bi se posle osvezavanja racunali iznova iz tadasnjih
+    // postavki — a poenta je da se zamrznu.
+    sacuvaj(stanje);
     el('datum').value = danas();
     popuniPostavke();
     vezi();

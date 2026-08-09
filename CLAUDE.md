@@ -165,17 +165,29 @@ start "" "E:\Program Files\Claude code\Radgeld\radgeld.html"
 
 ### Tests
 
-Built-in self-check: **43 assertions**, no framework, no dependencies.
+Built-in self-check: **63 assertions**, no framework, no dependencies.
 
 ```bash
 start "" "E:\Program Files\Claude code\Radgeld\radgeld.html#test"
 ```
 
-`#test` replaces the page with the results and puts `OK 43/43` or `PALO n/43`
+`#test` replaces the page with the results and puts `OK 63/63` or `PALO n/63`
 in the tab title; the runner is also exposed as `window.samoprovera()`.
 
 ### Do not undo these
 
+- **History is never recalculated.** Every ride carries `snimak`, the settings
+  that were in effect when it was logged, and is always computed from it — a new
+  fuel price applies only to rides added afterwards, so two rides in one list can
+  legitimately use different prices. `postavkeZa()` is the *only* place that
+  chooses snapshot over current settings, which is why `usteda`, `zbir`, and
+  `grupisiPoMesecu` never took a new parameter. A ride with no snapshot falls
+  back to current settings instead of throwing, and `migriraj()` stamps it once
+  on load **and saves immediately** — without that write the snapshots live only
+  in memory and the next reload re-derives them, defeating the freeze.
+- **The fuel-price timestamp is only set on manual edits** (`cenaGorivaIzmenjena`,
+  in the settings input handler, not in `sacuvaj`). Missing means "never set",
+  which counts as stale at once. Migration deliberately does **not** invent one.
 - **Savings are allowed to be negative.** A transit ticket costing more than the
   drive is a loss, shown in red and summed as-is. Clamping it to zero would make
   every total a lie. The assertion `usteda negativna` exists to lock this.
@@ -198,7 +210,11 @@ in the tab title; the runner is also exposed as `window.samoprovera()`.
 
 ## Language conventions
 
-All four tools: UI, all user-facing strings, and all code comments are in Serbian (Latin script). Keep new code in the same style — `var`, function declarations, no ES6+ syntax, no modules, no template literals.
+**Exception: RadGeld's UI is in English** — user-facing strings only, requested
+explicitly. Its code, comments, and assertion names stay Serbian, as do its spec
+and plan. Do not "fix" it back.
+
+The other three tools: UI, all user-facing strings, and all code comments are in Serbian (Latin script). Keep new code in the same style — `var`, function declarations, no ES6+ syntax, no modules, no template literals.
 
 Check before committing. **This should print nothing** — any hit is a real violation:
 

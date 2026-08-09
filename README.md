@@ -63,7 +63,8 @@ Sabira koliko je novca ostalo u džepu zato što auto nije korišćen. Upišeš 
 - Kod gradskog prevoza se cena karte oduzima; ako je karta skuplja od vožnje autom, **ušteda je negativna i piše crveno** — zbir tako ostaje pošten
 - Istorija je grupisana po mesecu, sa zbirom u zaglavlju
 - Zbirovi za ovaj mesec, ovu godinu i ukupno, u novcu, kilometrima i kg CO₂
-- Promena bilo koje postavke odmah preračunava celu istoriju
+- Nova cena goriva važi za vožnje upisane od tog trenutka — **već upisane vožnje zadržavaju cenu koja je važila kad si ih upisao**, jer se ono što se već desilo ne preračunava
+- Ispod polja za cenu piše koliko je cena stara; posle 30 dana te narandžasto opomene, uz vezu ka clever-tanken.de
 - Izvoz i uvoz svega u jedan JSON fajl
 
 Tamo i nazad je **jedan unos** — upiši zbir kilometara.
