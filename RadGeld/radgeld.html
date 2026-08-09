@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RadGeld</title>
+<style>
+body { font: 15px/1.5 system-ui, "Segoe UI", Arial, sans-serif; margin: 0; padding: 16px; }
+pre { font: 13px/1.5 Consolas, monospace; }
+.ok { color: #157f3b; }
+.palo { color: #b3261e; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------ *
+   * Samoprovera. Runner ide prvi da bi tvrdnje mogle da se pisu pre
+   * implementacije i da bi crveno stanje bilo citljivo.
+   * ------------------------------------------------------------------ */
+
+  var tvrdnje = [];
+
+  function proveri(naziv, dobio, ocekivano) {
+    var a = JSON.stringify(dobio), b = JSON.stringify(ocekivano);
+    tvrdnje.push({ naziv: naziv, prosao: a === b, dobio: a, ocekivano: b });
+  }
+
+  function samoprovera() {
+    tvrdnje = [];
+    try {
+      sveTvrdnje();
+    } catch (e) {
+      // Bez ovoga nedefinisana funkcija sruzi runner i stranica ostane prazna,
+      // pa se ne vidi sta je palo.
+      tvrdnje.push({ naziv: 'samoprovera je pukla: ' + e.message,
+                     prosao: false, dobio: '"greska"', ocekivano: '"bez greske"' });
+    }
+    var palo = 0, i, red, html = '';
+    for (i = 0; i < tvrdnje.length; i++) {
+      red = tvrdnje[i];
+      if (!red.prosao) palo++;
+      html += '<div class="' + (red.prosao ? 'ok' : 'palo') + '">' +
+              (red.prosao ? 'OK   ' : 'PALO ') + red.naziv +
+              (red.prosao ? '' : '   dobio: ' + red.dobio +
+                                 '   ocekivano: ' + red.ocekivano) + '</div>';
+    }
+    var rezime = palo === 0 ? 'OK ' + tvrdnje.length + '/' + tvrdnje.length
+                            : 'PALO ' + palo + '/' + tvrdnje.length;
+    document.title = rezime;
+    document.body.innerHTML = '<pre>' + rezime + '</pre>' + html;
+    return rezime;
+  }
+
+  window.samoprovera = samoprovera;
+
+  /* ------------------------------------------------------------------ *
+   * Ciste funkcije. Bez DOM-a, bez localStorage — sve odavde se testira.
+   * ------------------------------------------------------------------ */
+
+  var PODRAZUMEVANE = { potrosnja: 7.5, cenaGoriva: 1.75, trosakPoKm: 0.10,
+                        parkingPoVoznji: 0, co2PoKm: 150, valuta: '€' };
+
+  var MESECI = ['januar', 'februar', 'mart', 'april', 'maj', 'jun',
+                'jul', 'avgust', 'septembar', 'oktobar', 'novembar', 'decembar'];
+
+  var KAPA = 500;
+
+  // Prihvata i zarez i tacku jer se kod nas kuca zarez. Prazno je NaN, ne nula.
+  function uBroj(x) {
+    if (typeof x === 'number') { return x; }
+    if (typeof x !== 'string') { return NaN; }
+    var t = x.replace(/\s/g, '').replace(',', '.');
+    if (t === '') { return NaN; }
+    return Number(t);
+  }
+
+  function pozitivan(x, podrazumevano) {
+    var n = uBroj(x);
+    return (isFinite(n) && n > 0) ? n : podrazumevano;
+  }
+
+  function nenegativan(x, podrazumevano) {
+    var n = uBroj(x);
+    return (isFinite(n) && n >= 0) ? n : podrazumevano;
+  }
+
+  // Sanira se pri racunu, nikad pri kucanju: polje i localStorage zadrzavaju
+  // ono sto je korisnik ukucao. Vraca nov objekat, original se ne dira.
+  function sanirajPostavke(p) {
+    var izvor = p || {};
+    return {
+      potrosnja: pozitivan(izvor.potrosnja, PODRAZUMEVANE.potrosnja),
+      cenaGoriva: pozitivan(izvor.cenaGoriva, PODRAZUMEVANE.cenaGoriva),
+      trosakPoKm: nenegativan(izvor.trosakPoKm, PODRAZUMEVANE.trosakPoKm),
+      parkingPoVoznji: nenegativan(izvor.parkingPoVoznji, PODRAZUMEVANE.parkingPoVoznji),
+      co2PoKm: nenegativan(izvor.co2PoKm, PODRAZUMEVANE.co2PoKm),
+      valuta: (typeof izvor.valuta === 'string' && izvor.valuta !== '')
+              ? izvor.valuta : PODRAZUMEVANE.valuta
+    };
+  }
+
+  function cenaGorivaPoKm(p) { return p.potrosnja / 100 * p.cenaGoriva; }
+
+  function cenaAutaPoKm(p) { return cenaGorivaPoKm(p) + p.trosakPoKm; }
+
+  function trosakAutom(v, p) { return v.km * cenaAutaPoKm(p) + p.parkingPoVoznji; }
+
+  function trosakAlternative(v) {
+    return v.nacin === 'prevoz' ? (uBroj(v.cenaKarte) || 0) : 0;
+  }
+
+  // Sme da bude negativna: skupa karta za kratku relaciju jeste gubitak i
+  // tako se i prikazuje. Secenje na nulu bi lagalo u zbirovima.
+  function usteda(v, p) { return trosakAutom(v, p) - trosakAlternative(v); }
+
+  function co2Usteda(v, p) { return v.km * p.co2PoKm / 1000; }
+
+  function zbir(voznje, p) {
+    var novac = 0, km = 0, co2 = 0, i;
+    for (i = 0; i < voznje.length; i++) {
+      novac += usteda(voznje[i], p);
+      km += voznje[i].km;
+      co2 += co2Usteda(voznje[i], p);
+    }
+    return { novac: novac, km: km, co2: co2 };
+  }
+
+  // Datum je "YYYY-MM-DD" pa je poredjenje prefiksa tacno i bez Date objekta.
+  function filtriraj(voznje, prefiks) {
+    var r = [], i;
+    for (i = 0; i < voznje.length; i++) {
+      if (String(voznje[i].datum).indexOf(prefiks) === 0) { r.push(voznje[i]); }
+    }
+    return r;
+  }
+
+  function nazivMeseca(kljuc) {
+    var mesec = parseInt(kljuc.slice(5, 7), 10);
+    return MESECI[mesec - 1] + ' ' + kljuc.slice(0, 4) + '.';
+  }
+
+  function grupisiPoMesecu(voznje, p) {
+    var mapa = {}, redosled = [], grupe = [], i, k;
+    for (i = 0; i < voznje.length; i++) {
+      k = String(voznje[i].datum).slice(0, 7);
+      if (!mapa.hasOwnProperty(k)) { mapa[k] = []; redosled.push(k); }
+      mapa[k].push(voznje[i]);
+    }
+    redosled.sort();
+    redosled.reverse();
+    for (i = 0; i < redosled.length; i++) {
+      k = redosled[i];
+      grupe.push({ kljuc: k, naziv: nazivMeseca(k), stavke: mapa[k],
+                   novac: zbir(mapa[k], p).novac });
+    }
+    return grupe;
+  }
+
+  // Zaokruzuje se samo ovde, pri prikazu. Zbirovi se sabiraju nezaokruzeni.
+  function formatiraj(broj, valuta) {
+    var n = isFinite(broj) ? broj : 0;
+    return n.toFixed(2).replace('.', ',') + ' ' + valuta;
+  }
+
+  function dodajVoznju(stanje, v) {
+    var lista = stanje.voznje.slice();
+    lista.push(v);
+    lista.sort(function (a, b) {
+      if (a.datum !== b.datum) { return a.datum < b.datum ? 1 : -1; }
+      return b.id - a.id;
+    });
+    return { verzija: 1, postavke: stanje.postavke, voznje: lista.slice(0, KAPA) };
+  }
+
+  function jesteNiz(x) {
+    return Object.prototype.toString.call(x) === '[object Array]';
+  }
+
+  function procitajUvoz(tekst) {
+    var o;
+    try {
+      o = JSON.parse(tekst);
+    } catch (e) {
+      return { ok: false, greska: 'Fajl nije ispravan JSON.' };
+    }
+    if (!o || !jesteNiz(o.voznje)) {
+      return { ok: false, greska: 'Fajl nije RadGeld izvoz.' };
+    }
+    return { ok: true, stanje: { verzija: 1, postavke: sanirajPostavke(o.postavke),
+                                 voznje: o.voznje.slice(0, KAPA) } };
+  }
+
+  function bezHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function sveTvrdnje() {
+
+    /* --- formula ------------------------------------------------------ */
+
+    function blizu(a, b) { return Math.abs(a - b) < 1e-9; }
+
+    var P = { potrosnja: 8, cenaGoriva: 2, trosakPoKm: 0.1,
+              parkingPoVoznji: 1, co2PoKm: 150, valuta: '€' };
+
+    proveri('blizu prihvata gresku', blizu(0.1 + 0.2, 0.3), true);
+    proveri('blizu nije slepa', blizu(1, 1.01), false);
+    proveri('uBroj zarez', uBroj('3,5'), 3.5);
+    proveri('uBroj tacka', uBroj('3.5'), 3.5);
+    proveri('uBroj prazno', isNaN(uBroj('')), true);
+    proveri('gorivo po km', blizu(cenaGorivaPoKm(P), 0.16), true);
+    proveri('auto po km', blizu(cenaAutaPoKm(P), 0.26), true);
+    proveri('trosak autom', blizu(trosakAutom({ km: 10 }, P), 3.6), true);
+    proveri('alternativa bicikl', trosakAlternative({ nacin: 'bicikl', cenaKarte: 9 }), 0);
+    proveri('alternativa prevoz', trosakAlternative({ nacin: 'prevoz', cenaKarte: 1.2 }), 1.2);
+    proveri('usteda bicikl', blizu(usteda({ km: 10, nacin: 'bicikl' }, P), 3.6), true);
+    proveri('usteda negativna',
+            blizu(usteda({ km: 1, nacin: 'prevoz', cenaKarte: 5 }, P), -3.74), true);
+    proveri('co2 u kg', blizu(co2Usteda({ km: 10 }, P), 1.5), true);
+
+    /* --- sanitizacija postavki ---------------------------------------- */
+
+    proveri('prazna potrosnja -> podrazumevana', sanirajPostavke({ potrosnja: '' }).potrosnja, 7.5);
+    proveri('negativna potrosnja -> podrazumevana', sanirajPostavke({ potrosnja: -3 }).potrosnja, 7.5);
+    proveri('nula trosak po km ostaje', sanirajPostavke({ trosakPoKm: 0 }).trosakPoKm, 0);
+    proveri('smece u parkingu -> nula', sanirajPostavke({ parkingPoVoznji: 'abc' }).parkingPoVoznji, 0);
+    proveri('valuta prazna -> evro', sanirajPostavke({ valuta: '' }).valuta, '€');
+    proveri('zarez u ceni goriva', sanirajPostavke({ cenaGoriva: '1,75' }).cenaGoriva, 1.75);
+    proveri('ne dira original', (function () {
+      var p = { potrosnja: -1 }; sanirajPostavke(p); return p.potrosnja;
+    }()), -1);
+
+    /* --- zbirovi, filtriranje, grupisanje, format ---------------------- */
+
+    var V = [{ id: 3, datum: '2026-08-05', km: 10, nacin: 'bicikl', cenaKarte: 0 },
+             { id: 2, datum: '2026-08-01', km: 4,  nacin: 'pesice', cenaKarte: 0 },
+             { id: 1, datum: '2026-07-20', km: 6,  nacin: 'prevoz', cenaKarte: 1 }];
+
+    proveri('filtriraj mesec', filtriraj(V, '2026-08').length, 2);
+    proveri('filtriraj godinu', filtriraj(V, '2026').length, 3);
+    proveri('filtriraj promasaj', filtriraj(V, '2025').length, 0);
+    proveri('zbir km', zbir(V, P).km, 20);
+    // 3.6 (bicikl) + 2.04 (pesice) + 1.56 (prevoz: 2.56 minus karta 1) = 7.2
+    proveri('zbir novca', blizu(zbir(V, P).novac, 7.2), true);
+    proveri('karta se oduzima od zbira', blizu(zbir([V[2]], P).novac, 1.56), true);
+    proveri('zbir praznog', zbir([], P), { novac: 0, km: 0, co2: 0 });
+    proveri('grupa broj meseci', grupisiPoMesecu(V, P).length, 2);
+    proveri('grupa najnoviji prvi', grupisiPoMesecu(V, P)[0].kljuc, '2026-08');
+    proveri('naziv meseca', grupisiPoMesecu(V, P)[0].naziv, 'avgust 2026.');
+    proveri('zbir grupe', blizu(grupisiPoMesecu(V, P)[0].novac, 5.64), true);
+    proveri('format zarez', formatiraj(3.418, '€'), '3,42 €');
+    proveri('format negativan', formatiraj(-1.2, '€'), '-1,20 €');
+
+    /* --- stanje, kapa, uvoz ------------------------------------------- */
+
+    proveri('dodata je prva', dodajVoznju({ voznje: V.slice() },
+            { id: 9, datum: '2026-09-01', km: 1, nacin: 'bicikl' }).voznje[0].id, 9);
+    proveri('kapa 500', (function () {
+      var s = { voznje: [] }, i;
+      for (i = 0; i < 505; i++) {
+        s = dodajVoznju(s, { id: i, datum: '2026-08-01', km: 1, nacin: 'bicikl' });
+      }
+      return s.voznje.length;
+    }()), 500);
+    proveri('uvoz smeca', procitajUvoz('{ ovo nije json').ok, false);
+    proveri('uvoz praznog niza', procitajUvoz('{"verzija":1,"voznje":[],"postavke":{}}').ok, true);
+    proveri('uvoz bez voznji polja', procitajUvoz('{"verzija":1}').ok, false);
+    proveri('uvoz vraca sanirane postavke',
+            procitajUvoz('{"verzija":1,"voznje":[],"postavke":{}}').stanje.postavke.potrosnja, 7.5);
+
+    /* --- pomocno ------------------------------------------------------- */
+
+    proveri('bezHtml sklanja oznake', bezHtml('<b>x</b>'), '&lt;b&gt;x&lt;/b&gt;');
+    proveri('bezHtml ostavlja tekst', bezHtml('do posla i nazad'), 'do posla i nazad');
+  }
+
+  if (location.hash === '#test') { samoprovera(); }
+}());
+</script>
+</body>
+</html>
