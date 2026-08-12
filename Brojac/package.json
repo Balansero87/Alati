@@ -1,0 +1,13 @@
+{
+  "name": "brojac",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Brojač — PWA sa brojilima koja korisnik sam dodaje. Aplikacija je čist HTML/CSS/JS bez zavisnosti; ovde stoje samo alati za generisanje ikonica.",
+  "scripts": {
+    "ikone": "node napravi-ikone.js",
+    "server": "python -m http.server 8000"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.5"
+  }
+}

@@ -1,6 +1,6 @@
 # Alati
 
-Mali alati bez naloga, bez servera i bez pretplate. Tri rade u browseru i svaki je **jedan HTML fajl** — dvoklik pa radi. Četvrti je pravi Windows program sa instalerom.
+Mali alati bez naloga, bez servera i bez pretplate. Četiri rade u browseru i svaki je **jedan HTML fajl** — dvoklik pa radi. Peti je pravi Windows program sa instalerom.
 
 ## Prevodilac SR ⇄ DE
 
@@ -75,6 +75,16 @@ Tamo i nazad je **jedan unos** — upiši zbir kilometara.
 
 Provera ispravnosti je ugrađena — otvori fajl sa `#test` na kraju adrese.
 
+## Brojač
+
+`Brojac/index.html`
+
+Brojila sa imenima koja sam upišeš. Tap na karticu je +1, „−" oduzima, pod „Uredi" se menjaju imena, vraća na nulu i briše. Cifre se prevrću kao na starom brojaču.
+
+**Ne traži internet.** Nijedan mrežni poziv — ni fontovi, koji stoje u `Brojac/fonts/`. Sve se čuva u samom browseru (`localStorage`), na ovom uređaju.
+
+**Na telefon:** uz `index.html` idu `manifest.webmanifest`, `sw.js` i četiri ikonice, pa se alat instalira na početni ekran i radi bez signala. Kao i RadGeld, mora da bude serviran preko **https** ili sa `localhost` — servisni radnik ne radi ni sa `file://` ni sa obične http adrese u lokalnoj mreži. Ikonice se prave sa `node napravi-ikone.js`.
+
 ## Šta je gde
 
 | Putanja | Šta je |
@@ -83,6 +93,7 @@ Provera ispravnosti je ugrađena — otvori fajl sa `#test` na kraju adrese.
 | `smanji-slike/` | alat za slike, plus ikona za prečicu |
 | `kalkulator/` | Electron aplikacija, izvorni kod i ikona za instaler |
 | `Radgeld/` | računica ušteđenog novca kad se ne vozi auto |
+| `Brojac/` | brojila sa imenima, PWA sa lokalnim fontovima i ikonicama |
 | `docs/specifikacije/` | šta je trebalo napraviti i zašto tako |
 | `docs/planovi/` | kako je građeno, korak po korak |
 | `docs/smanji-slike-dnevnik-izrade.md` | nalazi recenzija i odluke tokom izrade |
