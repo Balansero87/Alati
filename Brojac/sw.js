@@ -6,7 +6,7 @@
    VAŽNO: pri svakoj izmeni bilo kog fajla iz LJUSKA podigni VERZIJA.
    Bez toga 'activate' ne briše stari keš i telefon ostaje na staroj verziji. */
 
-var VERZIJA = 'v1';
+var VERZIJA = 'v2';
 var KES = 'brojac-' + VERZIJA;
 
 var LJUSKA = [

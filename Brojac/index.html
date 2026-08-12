@@ -275,9 +275,15 @@
 
   /* Rolling digits — jedini pokret u aplikaciji */
   function rollTo(drum, text, dir){
-    const old = drum.querySelector('.digits');
+    /* Poslednji span je cifra koja je na redu da ostane; sve pre njega su
+       zaostaci prekinutih prevrtanja. querySelector bi vratio prvi, pa bi se
+       pri brzom pritiskanju isti span vrteo dvaput dok bi oni između zauvek
+       stajali jedan preko drugog — otud crna mrlja umesto cifre. */
+    const svi = drum.querySelectorAll('.digits');
+    const old = svi[svi.length - 1];
     if(!old || reduce || !old.animate){ drum.innerHTML = '<span class="digits">' + text + '</span>'; return; }
     if(old.textContent === text) return;
+    for(let i = 0; i < svi.length - 1; i++) svi[i].remove();
 
     const incoming = document.createElement('span');
     incoming.className = 'digits';
