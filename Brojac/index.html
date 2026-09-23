@@ -398,6 +398,24 @@
 
       listEl.appendChild(card);
     });
+
+    if(editing){
+      const deleteAll = document.createElement('button');
+      deleteAll.type = 'button';
+      deleteAll.className = 'tool danger';
+      deleteAll.textContent = 'Obriši sva brojila';
+      deleteAll.addEventListener('click', () => {
+        if(!window.confirm('Obrisati sva brojila? Ova radnja se ne može poništiti.')) return;
+        counters = [];
+        armed = null;
+        editing = false;
+        editToggle.textContent = 'Uredi';
+        editToggle.classList.remove('on');
+        save();
+        render();
+      });
+      listEl.appendChild(deleteAll);
+    }
   }
 
   function addCounter(){
