@@ -6,7 +6,7 @@
    VAŽNO: pri svakoj izmeni bilo kog fajla iz LJUSKA podigni VERZIJA.
    Bez toga 'activate' ne briše stari keš i telefon ostaje na staroj verziji. */
 
-var VERZIJA = 'v3';
+var VERZIJA = 'v4';
 var KES = 'brojac-' + VERZIJA;
 
 var LJUSKA = [
@@ -26,7 +26,11 @@ var LJUSKA = [
 self.addEventListener('install', function(dogadjaj){
   dogadjaj.waitUntil(
     caches.open(KES).then(function(kes){
-      return kes.addAll(LJUSKA);
+      /* Novi offline keš mora dobiti nove fajlove, ne prethodnu verziju
+         iz HTTP keša browsera koja na GitHub Pages-u može još biti sveža. */
+      return kes.addAll(LJUSKA.map(function(putanja){
+        return new Request(putanja, { cache: 'reload' });
+      }));
     }).then(function(){
       return self.skipWaiting();
     })
